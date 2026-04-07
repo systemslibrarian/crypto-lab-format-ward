@@ -43,6 +43,12 @@ npm run build
 npm run preview
 ```
 
+## GitHub Pages
+
+The Vite base path is resolved automatically during GitHub Actions builds from `GITHUB_REPOSITORY`, so project-page deploys keep working after forks or repository renames.
+
+If you need to override it manually, set `PAGES_BASE_PATH` before building.
+
 Run vector checks:
 
 ```bash

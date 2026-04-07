@@ -124,12 +124,11 @@ function installThemeToggle(): void {
   const button = document.getElementById("theme-toggle") as HTMLButtonElement | null;
   const root = document.documentElement;
 
-  const prefersDark = globalThis.matchMedia?.("(prefers-color-scheme: dark)").matches;
   const saved = localStorage.getItem("format-ward-theme");
   if (saved === "light" || saved === "dark") {
     root.dataset.theme = saved;
   } else {
-    root.dataset.theme = prefersDark ? "dark" : "light";
+    root.dataset.theme = "dark";
   }
 
   const syncLabel = (): void => {
