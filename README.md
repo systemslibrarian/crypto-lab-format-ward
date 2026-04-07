@@ -2,6 +2,8 @@
 
 `FF1 · FF3-1 · AES-256 · Feistel Network`
 
+**[Live Demo](https://systemslibrarian.github.io/crypto-lab-format-ward/)**
+
 ## Overview
 
 Format Ward is a browser-based crypto lab demo for format-preserving encryption (FPE) using FF1 and FF3-1 from NIST SP 800-38G.
