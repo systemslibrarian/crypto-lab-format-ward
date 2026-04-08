@@ -30,7 +30,6 @@ function setText(id: string, text: string): void {
     el.textContent = text;
   }
 }
-
 function getInputValue(id: string): string {
   const el = document.getElementById(id) as HTMLInputElement | null;
   if (!el) {
@@ -118,35 +117,6 @@ async function runVectorSmokeCheck(): Promise<void> {
   } catch (error) {
     setText("vector-status", `Vector check failed: ${(error as Error).message}`);
   }
-}
-
-function installThemeToggle(): void {
-  const button = document.getElementById("theme-toggle") as HTMLButtonElement | null;
-  const root = document.documentElement;
-
-  const saved = localStorage.getItem("format-ward-theme");
-  if (saved === "light" || saved === "dark") {
-    root.dataset.theme = saved;
-  } else {
-    root.dataset.theme = "dark";
-  }
-
-  const syncLabel = (): void => {
-    const isDark = root.dataset.theme !== "light";
-    if (button) {
-      button.textContent = isDark ? "🌙" : "☀️";
-      button.setAttribute("aria-label", isDark ? "Switch to light mode" : "Switch to dark mode");
-    }
-  };
-
-  syncLabel();
-
-  button?.addEventListener("click", () => {
-    const next = root.dataset.theme === "light" ? "dark" : "light";
-    root.dataset.theme = next;
-    localStorage.setItem("format-ward-theme", next);
-    syncLabel();
-  });
 }
 
 function wireKeyGenerators(): void {
@@ -306,7 +276,7 @@ function template(): string {
       <header class="hero" role="banner">
         <div class="chip-row" role="list" aria-label="Category and controls">
           <span class="chip category" role="listitem">Format-Preserving Encryption</span>
-          <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Switch color theme"></button>
+          <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Switch to light mode"></button>
         </div>
         <h1>Format Ward</h1>
         <p class="subtitle">Interactive FF1 and FF3-1 demo over real WebCrypto AES rounds from NIST SP 800-38G.</p>
@@ -494,7 +464,6 @@ export function initUI(): void {
   }
 
   app.innerHTML = template();
-  installThemeToggle();
   wireKeyGenerators();
   wirePanel1();
   wirePanel2();
@@ -502,5 +471,3 @@ export function initUI(): void {
   wirePanel4();
   runVectorSmokeCheck();
 }
-
-initUI();

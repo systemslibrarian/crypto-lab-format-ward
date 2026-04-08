@@ -38,24 +38,6 @@
   --focus-ring: var(--accent-2);
 }
 
-/* Respect system-level preference when no JS theme is stored */
-@media (prefers-color-scheme: light) {
-  :root:not([data-theme]) {
-    --bg: #f8fbff;
-    --bg-soft: #e6f0fa;
-    --surface: #ffffff;
-    --surface-2: #f0f6fd;
-    --text: #10222d;
-    --muted: #4e6370;
-    --accent: #ef6f00;
-    --accent-2: #0f9b8e;
-    --danger: #b13030;
-    --border: #c6d8e7;
-    --shadow: rgba(20, 30, 40, 0.12);
-    --focus-ring: var(--accent-2);
-  }
-}
-
 /* ── Reset ── */
 *,
 *::before,
