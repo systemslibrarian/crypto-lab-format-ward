@@ -15,7 +15,7 @@ function resolvePagesBase(): string {
 }
 
 export default defineConfig(() => ({
-  base: process.env.GITHUB_ACTIONS ? resolvePagesBase() : "/",
+  base: "/crypto-lab-format-ward/",
   server: {
     host: true,
     port: 5173

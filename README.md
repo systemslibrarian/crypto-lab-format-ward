@@ -6,37 +6,36 @@
 
 ## 1. What It Is
 
-Format Ward is a browser demo of format-preserving encryption using FF1 and FF3-1 with WebCrypto AES-CBC rounds in a Feistel construction. It solves the problem of protecting sensitive fields while keeping the original character set and field shape, so existing schema constraints continue to work. In this codebase, encryption and decryption are shown for PAN, SSN/phone/ZIP-style formats, and custom alphabets. This is a symmetric-key model: the same secret key material is required for both encryption and decryption.
+Format Ward is a browser demo of format-preserving encryption using FF1 and FF3-1 with AES-256 rounds in a Feistel Network construction. It addresses cases where sensitive identifiers must be encrypted without changing length or allowed character set, so legacy schemas and validators can still accept the data. The demo includes encrypt and decrypt flows for PAN-like numbers, masked SSN/phone/ZIP formats, and a custom alphabet panel. This is a symmetric-key model, so the same secret key material is required to decrypt what was encrypted.
 
 ## 2. When to Use It
 
-- Legacy databases with strict field validation: FF1/FF3-1 let you encrypt values while preserving the original format, so downstream validators and fixed-width schemas continue to accept the data.
-- PAN tokenization workflows: preserving decimal length and structure helps payment pipelines that cannot immediately migrate away from format-bound interfaces.
-- Masked analytics for structured identifiers: FF1 can protect only the digit positions in SSN/phone-style strings while keeping separators in place for operational readability.
-- Cross-system data sharing where format compatibility is mandatory: custom-alphabet FF1 keeps agreed symbol sets and length invariant across parties.
-- Do not use this when you need authenticated encryption by itself: FF1/FF3-1 preserve format but do not replace integrity/authenticity controls at the protocol layer.
+- Legacy structured fields with strict validators: FF1 and FF3-1 preserve radix and length so existing database and application format checks can continue working.
+- PAN and other numeric tokenization workflows: the output stays numeric and fixed-width, which fits payment-adjacent interfaces that cannot accept arbitrary binary ciphertext.
+- Mixed-format identifiers such as SSN/phone patterns: encrypting only digit positions keeps separators and presentation shape stable for operational tooling.
+- Custom in-domain identifiers: the custom alphabet flow demonstrates FF1 over non-decimal symbol sets while preserving exact message length.
+- Do not use this as your only protection where integrity is required: FF1/FF3-1 provide confidentiality for domain values but do not provide authenticity or tamper detection by themselves.
 
 ## 3. Live Demo
 
 Live GitHub Pages demo: https://systemslibrarian.github.io/crypto-lab-format-ward/
 
-The demo supports both encrypt and decrypt flows in each panel and displays round-trip results so you can verify reversibility. You can run FF1 and FF3-1 side-by-side, compare output and timing, and inspect Luhn validity behavior on ciphertext for PAN examples. Exposed controls include plaintext/format selectors, AES-256 key generation, FF1 tweak input, FF3-1 tweak input (14 hex chars), and custom alphabet selection.
+The demo supports encrypt and decrypt flows and shows round-trip outputs so you can verify reversibility directly in the browser. You can run FF1 and FF3-1 side by side in the comparison panel, including timing output and PAN-focused Luhn checks on ciphertext results. Exposed controls include AES-256 key generation, FF1 tweak fields, FF3-1 14-hex-character tweak fields, plaintext/format selectors, and custom alphabet input.
 
 ## 4. What Can Go Wrong
 
-- FF3-1 margin assumptions: FF3-1 has published differential-cryptanalysis results relative to FF1, which is why this demo marks FF1 as the preferred default for new systems.
-- Wrong tweak size for FF3-1: FF3-1 requires exactly a 56-bit tweak (14 hex chars), and using the wrong length breaks interoperability and security assumptions.
-- Small-domain misuse: very small message spaces reduce effective security for format-preserving schemes because exhaustive or statistical attacks become more practical.
-- Deterministic reuse patterns: reusing the same key/tweak configuration on repeated structured fields can leak equality patterns even though plaintext is hidden.
-- Alphabet/radix mismatch bugs: if application characters and radix mapping are inconsistent, encryption can fail or silently produce invalid domain behavior for downstream systems.
+- FF3-1 security margin assumptions: published differential cryptanalysis against FF3 variants is why this project labels FF1 as the preferred default where possible.
+- Invalid FF3-1 tweak length: FF3-1 requires a 56-bit tweak (7 bytes or 14 hex characters), and wrong length causes incorrect operation and non-interoperable ciphertext.
+- Small-domain leakage risk: small or highly structured domains can make guessing and statistical recovery materially easier for format-preserving modes.
+- Deterministic equality leakage from key and tweak reuse: reusing the same key and tweak over repeated identifiers can reveal when plaintext values repeat.
+- Alphabet-to-symbol mapping implementation bugs: if an input character is outside the declared alphabet or mapping is inconsistent, encryption fails or yields invalid in-domain behavior.
 
 ## 5. Real-World Usage
 
-- NIST SP 800-38G and SP 800-38G Rev.1: these standards define FF1 and FF3-1 and are the baseline references used by compliant implementations.
-- PCI-oriented tokenization deployments: payment environments commonly use NIST FPE modes (especially FF1) to protect PAN data without breaking numeric format constraints.
-- OpenText Voltage SecureData: this enterprise data-protection platform documents format-preserving encryption deployments for structured fields.
-- Protegrity data protection platforms: Protegrity materials describe FPE usage for structured-data tokenization in regulated environments.
-- Application security toolkits such as Bouncy Castle: widely used libraries include FF1/FF3-1 primitives that are integrated into production JVM systems handling structured identifiers.
+- NIST SP 800-38G and SP 800-38G Rev.1: these standards define FF1 and FF3-1 and are used as the normative basis for compliant format-preserving encryption implementations.
+- OpenText Voltage SecureData: this platform documents deployment of NIST-style format-preserving encryption to protect structured enterprise fields.
+- Protegrity data protection platform: Protegrity materials describe FPE-based protection and tokenization patterns for regulated structured data.
+- Bouncy Castle cryptography library: production JVM systems use its FF1 and FF3-1 engines when implementing standards-aligned FPE in application stacks.
 
 ## Related Demos
 
