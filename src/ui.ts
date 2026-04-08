@@ -134,7 +134,7 @@ function installThemeToggle(): void {
   const syncLabel = (): void => {
     const isDark = root.dataset.theme !== "light";
     if (button) {
-      button.textContent = isDark ? "☀ Light Mode" : "☾ Dark Mode";
+      button.textContent = isDark ? "🌙" : "☀️";
       button.setAttribute("aria-label", isDark ? "Switch to light mode" : "Switch to dark mode");
     }
   };
@@ -306,7 +306,7 @@ function template(): string {
       <header class="hero" role="banner">
         <div class="chip-row" role="list" aria-label="Category and controls">
           <span class="chip category" role="listitem">Format-Preserving Encryption</span>
-          <button id="theme-toggle" class="chip action" type="button" aria-label="Switch color theme">Switch to Light</button>
+          <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Switch color theme"></button>
         </div>
         <h1>Format Ward</h1>
         <p class="subtitle">Interactive FF1 and FF3-1 demo over real WebCrypto AES rounds from NIST SP 800-38G.</p>

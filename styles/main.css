@@ -123,6 +123,7 @@ body {
 
 /* ── Hero ── */
 .hero {
+  position: relative;
   background: linear-gradient(145deg, var(--surface), var(--surface-2));
   border: 1px solid var(--border);
   border-radius: 20px;
@@ -179,6 +180,30 @@ h1 {
   min-height: var(--tap-min);
   min-width: var(--tap-min);
   justify-content: center;
+}
+
+/* ── Theme toggle (icon button) ── */
+.theme-toggle {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 2.6rem;
+  height: 2.6rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--surface-2) 70%, transparent);
+  color: var(--text);
+  font-size: 1.25rem;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0;
+  transition: background 0.15s ease;
+}
+.theme-toggle:hover {
+  background: color-mix(in srgb, var(--accent) 25%, transparent);
 }
 
 /* ── Sections ── */
