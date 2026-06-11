@@ -225,6 +225,9 @@ export async function ff1Encrypt(
   if (n < 2) {
     throw new Error("FF1 requires at least 2 symbols.");
   }
+  if (Math.pow(radix, n) < 100) {
+    throw new Error("FF1 domain size must be at least 100 (radix^n >= 100).");
+  }
 
   const u = Math.floor(n / 2);
   const v = n - u;
@@ -248,6 +251,77 @@ export async function ff1Encrypt(
   return [...a, ...bPart];
 }
 
+export interface FF1Round {
+  index: number;
+  m: number;
+  aBefore: SymbolArray;
+  bBefore: SymbolArray;
+  y: bigint;
+  newB: SymbolArray;
+  aAfter: SymbolArray;
+  bAfter: SymbolArray;
+}
+
+export interface FF1TracedResult {
+  ciphertext: SymbolArray;
+  rounds: FF1Round[];
+  params: { n: number; u: number; v: number; b: number; d: number; radix: number };
+}
+
+export async function ff1EncryptTraced(
+  key: CryptoKey,
+  radix: number,
+  plaintext: SymbolArray,
+  tweak: Uint8Array<ArrayBufferLike> = new Uint8Array()
+): Promise<FF1TracedResult> {
+  validateDomain(radix, plaintext);
+  const n = plaintext.length;
+  if (n < 2) {
+    throw new Error("FF1 requires at least 2 symbols.");
+  }
+  if (Math.pow(radix, n) < 100) {
+    throw new Error("FF1 domain size must be at least 100 (radix^n >= 100).");
+  }
+
+  const u = Math.floor(n / 2);
+  const v = n - u;
+  const b = Math.ceil(Math.ceil(v * Math.log2(radix)) / 8);
+  const d = 4 * Math.ceil(b / 4) + 4;
+  const p = buildP(radix, n, u, tweak.length);
+
+  let a = plaintext.slice(0, u);
+  let bPart = plaintext.slice(u);
+  const rounds: FF1Round[] = [];
+
+  for (let i = 0; i < 10; i += 1) {
+    const m = i % 2 === 0 ? u : v;
+    const aBefore = a.slice();
+    const bBefore = bPart.slice();
+    const y = await ff1RoundY(key, radix, tweak, p, i, b, d, bPart);
+    const modulus = powBigInt(BigInt(radix), m);
+    const c = mod(numRadix(a, radix) + y, modulus);
+    const cArr = strRadix(c, m, radix);
+    a = bPart;
+    bPart = cArr;
+    rounds.push({
+      index: i,
+      m,
+      aBefore,
+      bBefore,
+      y,
+      newB: cArr,
+      aAfter: a.slice(),
+      bAfter: bPart.slice()
+    });
+  }
+
+  return {
+    ciphertext: [...a, ...bPart],
+    rounds,
+    params: { n, u, v, b, d, radix }
+  };
+}
+
 export async function ff1Decrypt(
   key: CryptoKey,
   radix: number,
@@ -258,6 +332,9 @@ export async function ff1Decrypt(
   const n = ciphertext.length;
   if (n < 2) {
     throw new Error("FF1 requires at least 2 symbols.");
+  }
+  if (Math.pow(radix, n) < 100) {
+    throw new Error("FF1 domain size must be at least 100 (radix^n >= 100).");
   }
 
   const u = Math.floor(n / 2);

@@ -1,11 +1,13 @@
 import {
+  FF1Round,
+  bytesToHex,
   ff1Decrypt,
   ff1Encrypt,
+  ff1EncryptTraced,
   generateRandomKeyHex,
   hexToBytes,
   importAes256KeyFromHex,
   importAesKeyFromHex,
-  reverseHex,
   stringToSymbols,
   symbolsToString
 } from "./ff1";
@@ -57,7 +59,7 @@ async function parseAes256Key(id: string): Promise<CryptoKey> {
 async function parseKeyPair(id: string): Promise<{ ff1Key: CryptoKey; ff3Key: CryptoKey }> {
   const keyHex = normalizeHex(getInputValue(id));
   const ff1Key = await importAes256KeyFromHex(keyHex);
-  const ff3Key = await importAes256KeyFromHex(reverseHex(keyHex));
+  const ff3Key = await importAes256KeyFromHex(keyHex);
   return { ff1Key, ff3Key };
 }
 
@@ -96,13 +98,13 @@ async function runVectorSmokeCheck(): Promise<void> {
     const ff1Ct = await ff1Encrypt(ff1Key, 10, ff1Pt, hexToBytes("39383736353433323130"));
     const ff1CtStr = fromDigitSymbols(ff1Ct);
 
-    const ff3Key = await importAesKeyFromHex(reverseHex("ef4359d8d580aa4f7f036d6f04fc6a94"));
+    const ff3Key = await importAesKeyFromHex("ef4359d8d580aa4f7f036d6f04fc6a94");
     const ff3Pt = toDigitSymbols("890121234567890000");
     const ff3Ct = await ff3_1Encrypt(ff3Key, 10, ff3Pt, hexToBytes("d8e7920afa330a"));
     const ff3CtStr = fromDigitSymbols(ff3Ct);
 
     const ff1Expected = "1001623463";
-    const ff3Expected = "477064185124354662";
+    const ff3Expected = "822408390587234504";
 
     const ok = ff1CtStr === ff1Expected && ff3CtStr === ff3Expected;
     if (ok) {
@@ -124,7 +126,9 @@ function wireKeyGenerators(): void {
     { buttonId: "cc-key-gen", inputId: "cc-key" },
     { buttonId: "mask-key-gen", inputId: "mask-key" },
     { buttonId: "cmp-key-gen", inputId: "cmp-key" },
-    { buttonId: "custom-key-gen", inputId: "custom-key" }
+    { buttonId: "custom-key-gen", inputId: "custom-key" },
+    { buttonId: "rounds-key-gen", inputId: "rounds-key" },
+    { buttonId: "fail-key-gen", inputId: "fail-key" }
   ];
 
   for (const pair of pairs) {
@@ -268,6 +272,211 @@ function wirePanel4(): void {
   });
 }
 
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function symbolsToDigits(symbols: number[]): string {
+  return fromDigitSymbols(symbols);
+}
+
+function diffMarkup(a: string, b: string): string {
+  const out: string[] = [];
+  const len = Math.max(a.length, b.length);
+  for (let i = 0; i < len; i += 1) {
+    const ca = a[i] ?? "";
+    const cb = b[i] ?? "";
+    if (ca === cb) {
+      out.push(escapeHtml(cb));
+    } else {
+      out.push(`<span class="diff">${escapeHtml(cb)}</span>`);
+    }
+  }
+  return out.join("");
+}
+
+function countDiff(a: string, b: string): number {
+  let diff = 0;
+  const len = Math.max(a.length, b.length);
+  for (let i = 0; i < len; i += 1) {
+    if (a[i] !== b[i]) diff += 1;
+  }
+  return diff;
+}
+
+function flipTweakBit(tweak: Uint8Array, bitIndex: number): Uint8Array {
+  if (tweak.length === 0) {
+    return new Uint8Array([0x01]);
+  }
+  const out = new Uint8Array(tweak);
+  const byteIndex = Math.floor(bitIndex / 8) % tweak.length;
+  const bitInByte = bitIndex % 8;
+  out[byteIndex] ^= 1 << bitInByte;
+  return out;
+}
+
+function wireRoundsPanel(): void {
+  const button = document.getElementById("rounds-run") as HTMLButtonElement | null;
+  button?.addEventListener("click", async () => {
+    disableButton("rounds-run");
+    setText("rounds-status", "Running...");
+    const tbody = document.getElementById("rounds-tbody");
+    if (tbody) tbody.innerHTML = "";
+    try {
+      const plain = getInputValue("rounds-plain").trim();
+      if (!/^\d{2,}$/.test(plain)) {
+        throw new Error("Round walkthrough plaintext must be at least 2 digits.");
+      }
+      const key = await parseAes256Key("rounds-key");
+      const tweak = parseOptionalHexTweak(getInputValue("rounds-tweak"));
+      const traced = await ff1EncryptTraced(key, 10, toDigitSymbols(plain), tweak);
+
+      const u = traced.params.u;
+      const v = traced.params.v;
+      setText(
+        "rounds-split",
+        `n=${traced.params.n}, u=${u}, v=${v}, b=${traced.params.b}B, d=${traced.params.d}B. ` +
+          `Initial A=${plain.slice(0, u)} | B=${plain.slice(u)}`
+      );
+
+      if (tbody) {
+        const rows = traced.rounds.map((r: FF1Round) => {
+          const yHex = r.y.toString(16);
+          return `
+            <tr>
+              <td>${r.index}</td>
+              <td>${r.m}</td>
+              <td><code>${escapeHtml(symbolsToDigits(r.aBefore))}</code></td>
+              <td><code>${escapeHtml(symbolsToDigits(r.bBefore))}</code></td>
+              <td><code title="round-function output (added mod radix^m)">0x${escapeHtml(yHex)}</code></td>
+              <td><code>${escapeHtml(symbolsToDigits(r.newB))}</code></td>
+              <td><code><strong>${escapeHtml(symbolsToDigits(r.aAfter))}</strong> | <strong>${escapeHtml(symbolsToDigits(r.bAfter))}</strong></code></td>
+            </tr>`;
+        });
+        tbody.innerHTML = rows.join("");
+      }
+
+      setText("rounds-final", `Ciphertext: ${fromDigitSymbols(traced.ciphertext)}`);
+      setText("rounds-status", "Done.");
+    } catch (error) {
+      setText("rounds-status", (error as Error).message);
+    } finally {
+      enableButton("rounds-run");
+    }
+  });
+}
+
+function wireFailLab(): void {
+  const eqBtn = document.getElementById("fail-eq-run") as HTMLButtonElement | null;
+  eqBtn?.addEventListener("click", async () => {
+    disableButton("fail-eq-run");
+    setText("fail-eq-status", "Running...");
+    const tbody = document.getElementById("fail-eq-tbody");
+    if (tbody) tbody.innerHTML = "";
+    try {
+      const key = await parseAes256Key("fail-key");
+      const tweak = parseOptionalHexTweak(getInputValue("fail-tweak"));
+      const raw = getInputValue("fail-eq-list");
+      const items = raw
+        .split(/[\n,]+/)
+        .map((s) => s.trim())
+        .filter((s) => s.length >= 2);
+      if (items.length === 0) throw new Error("Enter at least one digit string.");
+
+      const results: Array<{ pt: string; ct: string }> = [];
+      for (const pt of items) {
+        if (!/^\d+$/.test(pt)) throw new Error(`Not digits-only: ${pt}`);
+        const ct = fromDigitSymbols(await ff1Encrypt(key, 10, toDigitSymbols(pt), tweak));
+        results.push({ pt, ct });
+      }
+      const ctCounts = new Map<string, number>();
+      for (const r of results) {
+        ctCounts.set(r.ct, (ctCounts.get(r.ct) ?? 0) + 1);
+      }
+      if (tbody) {
+        tbody.innerHTML = results
+          .map((r) => {
+            const dup = (ctCounts.get(r.ct) ?? 0) > 1;
+            const cls = dup ? "leak-row" : "";
+            const tag = dup ? `<span class="leak-tag">equality leak</span>` : "";
+            return `<tr class="${cls}"><td><code>${escapeHtml(r.pt)}</code></td><td><code>${escapeHtml(r.ct)}</code> ${tag}</td></tr>`;
+          })
+          .join("");
+      }
+      const dupes = results.filter((r) => (ctCounts.get(r.ct) ?? 0) > 1).length;
+      setText(
+        "fail-eq-status",
+        dupes > 0
+          ? `${dupes} ciphertext(s) repeat — identical plaintexts produced identical ciphertexts. Frequency analysis is now possible on this dataset.`
+          : "No duplicates in the input — try adding a repeated plaintext."
+      );
+    } catch (error) {
+      setText("fail-eq-status", (error as Error).message);
+    } finally {
+      enableButton("fail-eq-run");
+    }
+  });
+
+  const avBtn = document.getElementById("fail-av-run") as HTMLButtonElement | null;
+  avBtn?.addEventListener("click", async () => {
+    disableButton("fail-av-run");
+    setText("fail-av-status", "Running...");
+    try {
+      const key = await parseAes256Key("fail-key");
+      const tweak = parseOptionalHexTweak(getInputValue("fail-tweak"));
+      if (tweak.length === 0) throw new Error("Avalanche demo needs a non-empty tweak.");
+      const plain = getInputValue("fail-av-plain").trim();
+      if (!/^\d{2,}$/.test(plain)) throw new Error("Plaintext must be at least 2 digits.");
+
+      const ct1 = fromDigitSymbols(await ff1Encrypt(key, 10, toDigitSymbols(plain), tweak));
+      const tweak2 = flipTweakBit(tweak, 0);
+      const ct2 = fromDigitSymbols(await ff1Encrypt(key, 10, toDigitSymbols(plain), tweak2));
+
+      const diffs = countDiff(ct1, ct2);
+      const pct = ((diffs / ct1.length) * 100).toFixed(0);
+
+      setText("fail-av-tweak1", bytesToHex(tweak));
+      setText("fail-av-tweak2", bytesToHex(tweak2));
+      const ct1El = document.getElementById("fail-av-ct1");
+      const ct2El = document.getElementById("fail-av-ct2");
+      if (ct1El) ct1El.innerHTML = `<code>${escapeHtml(ct1)}</code>`;
+      if (ct2El) ct2El.innerHTML = `<code>${diffMarkup(ct1, ct2)}</code>`;
+      setText(
+        "fail-av-status",
+        `${diffs}/${ct1.length} symbols changed (${pct}%) after flipping one tweak bit. Per-record tweaks defeat equality leakage.`
+      );
+    } catch (error) {
+      setText("fail-av-status", (error as Error).message);
+    } finally {
+      enableButton("fail-av-run");
+    }
+  });
+
+  const updateDomain = (): void => {
+    const radix = Math.max(2, Math.min(65536, Number(getInputValue("fail-dom-radix")) || 10));
+    const len = Math.max(2, Math.min(64, Number(getInputValue("fail-dom-len")) || 4));
+    const size = Math.pow(radix, len);
+    const bits = Math.log2(size);
+    const sizeStr = size > 1e15 ? size.toExponential(2) : size.toLocaleString();
+    let verdict: string;
+    if (bits < 20) verdict = "Trivially brute-forceable. Treat as obfuscation, not encryption.";
+    else if (bits < 40) verdict = "Vulnerable to chosen-plaintext attack with modest compute.";
+    else if (bits < 60) verdict = "Adequate against casual attackers; still leaks via determinism.";
+    else verdict = "Domain is large; security depends on key/tweak hygiene, not domain size.";
+    setText(
+      "fail-dom-out",
+      `radix^length = ${radix}^${len} = ${sizeStr}  (≈ 2^${bits.toFixed(1)}). ${verdict}`
+    );
+  };
+  document.getElementById("fail-dom-radix")?.addEventListener("input", updateDomain);
+  document.getElementById("fail-dom-len")?.addEventListener("input", updateDomain);
+  updateDomain();
+}
+
 function template(): string {
   const key = generateRandomKeyHex(32);
   return `
@@ -291,6 +500,19 @@ function template(): string {
       <section class="why" aria-labelledby="why-heading">
         <h2 id="why-heading">Why This Matters</h2>
         <p>Legacy systems cannot always change field lengths. FPE encrypts sensitive values while keeping schema-compatible formats intact.</p>
+        <details class="glossary">
+          <summary>Glossary — terms used on this page</summary>
+          <dl>
+            <dt>Radix</dt><dd>Number of distinct symbols in the alphabet (10 for decimal, 26 for lowercase letters, 36 for alphanumeric).</dd>
+            <dt>Domain</dt><dd>The set of all length-N strings over the alphabet. Domain size = radix<sup>N</sup>. Small domains leak.</dd>
+            <dt>Tweak</dt><dd>A public, per-context value that diversifies the output without being a secret. Same key + different tweak = different ciphertext.</dd>
+            <dt>Feistel network</dt><dd>Encryption structure that splits the input into two halves (A | B), applies a keyed round function, swaps, and repeats. Reversible by design.</dd>
+            <dt>Round function</dt><dd>The keyed pseudorandom function applied each round. Here: AES-CBC-MAC over a formatted block, reduced mod radix<sup>m</sup>, then added to one half.</dd>
+            <dt>Rounds</dt><dd>FF1 uses 10 rounds. FF3-1 uses 8 rounds with a 56-bit tweak split into two halves.</dd>
+            <dt>AES-256</dt><dd>The 256-bit-key block cipher used inside the round function. WebCrypto provides the AES primitive used here.</dd>
+            <dt>Equality leak</dt><dd>Because FPE is deterministic on (key, tweak), identical plaintexts always produce identical ciphertexts — frequency analysis still works.</dd>
+          </dl>
+        </details>
       </section>
 
       <section class="refs" aria-label="References and verification status">
@@ -443,6 +665,112 @@ function template(): string {
 
       </section>
 
+      <section class="panel walkthrough" aria-labelledby="rounds-heading">
+        <h2 id="rounds-heading">Inside FF1 — Feistel Round Walkthrough</h2>
+        <p class="callout">FF1 is a 10-round Feistel network. Each round splits the plaintext into halves <strong>A | B</strong>, derives <strong>Y</strong> from <strong>B</strong> via an AES-driven round function, computes <code>(A + Y) mod radix<sup>m</sup></code>, then swaps. This panel runs a real encryption and shows the state after every round so you can watch the mixing happen.</p>
+        <div class="field">
+          <label for="rounds-plain">Plaintext (digits, ≥ 2)</label>
+          <input id="rounds-plain" type="text" inputmode="numeric" autocomplete="off" value="0123456789" />
+        </div>
+        <div class="field">
+          <label for="rounds-key">AES-256 Key (hex)</label>
+          <div class="inline">
+            <input id="rounds-key" type="text" spellcheck="false" autocomplete="off" value="2b7e151628aed2a6abf7158809cf4f3cef4359d8d580aa4f7f036d6f04fc6a94" />
+            <button id="rounds-key-gen" type="button" aria-label="Generate new AES-256 key for round walkthrough">Generate</button>
+          </div>
+        </div>
+        <div class="field">
+          <label for="rounds-tweak">FF1 tweak (hex)</label>
+          <input id="rounds-tweak" type="text" spellcheck="false" autocomplete="off" value="39383736353433323130" />
+        </div>
+        <button id="rounds-run" type="button">Trace Rounds</button>
+        <p id="rounds-split" class="hint">Click <em>Trace Rounds</em> to populate the table.</p>
+        <div class="table-wrap" tabindex="0" role="region" aria-label="FF1 round-by-round state">
+          <table class="rounds-table">
+            <caption class="sr-only">FF1 Feistel rounds</caption>
+            <thead>
+              <tr>
+                <th scope="col">i</th>
+                <th scope="col">m</th>
+                <th scope="col">A (left)</th>
+                <th scope="col">B (round-fn input)</th>
+                <th scope="col">Y (round output)</th>
+                <th scope="col">new B = (A+Y) mod r<sup>m</sup></th>
+                <th scope="col">After swap (A | B)</th>
+              </tr>
+            </thead>
+            <tbody id="rounds-tbody"></tbody>
+          </table>
+        </div>
+        <p id="rounds-final" class="status" role="status" aria-live="polite">Ciphertext: -</p>
+        <p class="status" id="rounds-status" role="status" aria-live="polite">Idle.</p>
+      </section>
+
+      <section class="panel fail-lab" aria-labelledby="fail-heading">
+        <h2 id="fail-heading">Failure Lab — Why FPE Still Leaks</h2>
+        <p class="callout">FPE preserves shape, not confidentiality of frequency. These three demos show <em>what</em> leaks, <em>how much</em> a tweak helps, and <em>when</em> the domain is too small to call this encryption at all.</p>
+
+        <div class="field">
+          <label for="fail-key">Shared AES-256 Key (hex)</label>
+          <div class="inline">
+            <input id="fail-key" type="text" spellcheck="false" autocomplete="off" />
+            <button id="fail-key-gen" type="button" aria-label="Generate new AES-256 key for failure lab">Generate</button>
+          </div>
+        </div>
+        <div class="field">
+          <label for="fail-tweak">Shared FF1 tweak (hex)</label>
+          <input id="fail-tweak" type="text" spellcheck="false" autocomplete="off" value="39383736353433323130" />
+        </div>
+
+        <h3 class="sub-h">1. Equality leak — same plaintext → same ciphertext</h3>
+        <p class="callout">FPE is deterministic on (key, tweak). If you re-use both across a dataset, repeated values stay visibly repeated. This is why frequency-based attacks still work on FPE-protected fields.</p>
+        <div class="field">
+          <label for="fail-eq-list">Plaintexts (one per line, digits only)</label>
+          <textarea id="fail-eq-list" rows="5" spellcheck="false" autocomplete="off">1111
+2222
+1111
+3333
+2222</textarea>
+        </div>
+        <button id="fail-eq-run" type="button">Encrypt all (same key + tweak)</button>
+        <div class="table-wrap" tabindex="0" role="region" aria-label="Equality leak results">
+          <table>
+            <thead><tr><th scope="col">Plaintext</th><th scope="col">Ciphertext</th></tr></thead>
+            <tbody id="fail-eq-tbody"></tbody>
+          </table>
+        </div>
+        <p class="status" id="fail-eq-status" role="status" aria-live="polite">Idle.</p>
+
+        <h3 class="sub-h">2. Tweak avalanche — one flipped bit ≈ whole new output</h3>
+        <p class="callout">A per-record tweak diversifies the output without needing a new key. Flip one bit of the tweak and the ciphertext changes in roughly half the symbols — the practical fix for the equality leak above.</p>
+        <div class="field">
+          <label for="fail-av-plain">Plaintext (digits)</label>
+          <input id="fail-av-plain" type="text" inputmode="numeric" autocomplete="off" value="987654321098" />
+        </div>
+        <button id="fail-av-run" type="button">Encrypt with T and T⊕1</button>
+        <div class="results" aria-live="polite" aria-atomic="true">
+          <p>Tweak A: <code><output id="fail-av-tweak1">-</output></code></p>
+          <p>Ciphertext A: <span id="fail-av-ct1">-</span></p>
+          <p>Tweak B: <code><output id="fail-av-tweak2">-</output></code> <span class="hint">(bit 0 flipped)</span></p>
+          <p>Ciphertext B: <span id="fail-av-ct2">-</span> <span class="hint">(red = changed)</span></p>
+        </div>
+        <p class="status" id="fail-av-status" role="status" aria-live="polite">Idle.</p>
+
+        <h3 class="sub-h">3. Domain calculator — when the domain is the attack surface</h3>
+        <p class="callout">FPE inherits the domain it preserves. A 4-digit PIN has only 10,000 possible values — an attacker who can query the encrypt oracle once per value owns the entire codebook. This calculator shows the practical limit.</p>
+        <div class="inline-fields">
+          <div class="field">
+            <label for="fail-dom-radix">Radix</label>
+            <input id="fail-dom-radix" type="number" min="2" max="65536" value="10" />
+          </div>
+          <div class="field">
+            <label for="fail-dom-len">Length</label>
+            <input id="fail-dom-len" type="number" min="2" max="64" value="4" />
+          </div>
+        </div>
+        <p id="fail-dom-out" class="status" role="status" aria-live="polite">-</p>
+      </section>
+
       <nav class="links" aria-label="Related demos and resources">
         <a href="https://github.com/systemslibrarian/crypto-lab-iron-letter" target="_blank" rel="noreferrer">crypto-lab-iron-letter</a>
         <a href="https://github.com/systemslibrarian/crypto-lab-shadow-vault" target="_blank" rel="noreferrer">crypto-lab-shadow-vault</a>
@@ -464,10 +792,13 @@ export function initUI(): void {
   }
 
   app.innerHTML = template();
+  setInputValue("fail-key", generateRandomKeyHex(32));
   wireKeyGenerators();
   wirePanel1();
   wirePanel2();
   wirePanel3();
   wirePanel4();
+  wireRoundsPanel();
+  wireFailLab();
   runVectorSmokeCheck();
 }

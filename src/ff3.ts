@@ -157,6 +157,9 @@ export async function ff3_1Encrypt(
   if (n < 2) {
     throw new Error("FF3-1 requires at least 2 symbols.");
   }
+  if (Math.pow(radix, n) < 100) {
+    throw new Error("FF3-1 domain size must be at least 100 (radix^n >= 100).");
+  }
 
   const { tl, tr } = splitTweak56(tweak56);
   const u = Math.ceil(n / 2);
@@ -189,6 +192,9 @@ export async function ff3_1Decrypt(
   const n = ciphertext.length;
   if (n < 2) {
     throw new Error("FF3-1 requires at least 2 symbols.");
+  }
+  if (Math.pow(radix, n) < 100) {
+    throw new Error("FF3-1 domain size must be at least 100 (radix^n >= 100).");
   }
 
   const { tl, tr } = splitTweak56(tweak56);

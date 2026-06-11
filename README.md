@@ -22,6 +22,13 @@ Live GitHub Pages demo: https://systemslibrarian.github.io/crypto-lab-format-war
 
 The demo supports encrypt and decrypt flows and shows round-trip outputs so you can verify reversibility directly in the browser. You can run FF1 and FF3-1 side by side in the comparison panel, including timing output and PAN-focused Luhn checks on ciphertext results. Exposed controls include AES-256 key generation, FF1 tweak fields, FF3-1 14-hex-character tweak fields, plaintext/format selectors, and custom alphabet input.
 
+Two teaching panels go further than the standard FPE black box:
+
+- **Inside FF1 — Feistel Round Walkthrough**: traces a real encryption through all 10 rounds and prints the state at each step (left half A, right half B, the AES-derived round output Y, the new B after modular addition, and the swap). This makes the Feistel structure observable instead of theoretical.
+- **Failure Lab — Why FPE Still Leaks**: three interactive demos that make the security caveats concrete — (1) the equality leak (same plaintext + same key + same tweak → same ciphertext, so frequency analysis still works), (2) the tweak avalanche (flipping one bit of the tweak changes roughly half the output symbols, which is the practical mitigation), and (3) a domain-size calculator that flags when the domain is too small to be called encryption at all.
+
+An inline glossary near the top of the page defines radix, tweak, domain, Feistel network, round function, and equality leak so the jargon does not stand between the reader and the demo.
+
 ## 4. What Can Go Wrong
 
 - FF3-1 security margin assumptions: published differential cryptanalysis against FF3 variants is why this project labels FF1 as the preferred default where possible.

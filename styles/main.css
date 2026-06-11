@@ -413,6 +413,134 @@ footer p {
   margin: 0;
 }
 
+/* ── Glossary ── */
+.glossary {
+  margin-top: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.4rem 0.75rem;
+  background: color-mix(in srgb, var(--surface-2) 50%, transparent);
+}
+
+.glossary > summary {
+  cursor: pointer;
+  font-weight: 600;
+  padding: 0.35rem 0;
+  color: var(--accent-2);
+}
+
+.glossary dl {
+  margin: 0.3rem 0 0.2rem;
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.35rem 0.85rem;
+}
+
+.glossary dt {
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.glossary dd {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+@media (max-width: 520px) {
+  .glossary dl {
+    grid-template-columns: 1fr;
+    gap: 0.1rem 0;
+  }
+  .glossary dd {
+    margin-bottom: 0.4rem;
+  }
+}
+
+/* ── Walkthrough & Failure Lab panels ── */
+.walkthrough,
+.fail-lab {
+  margin-top: 1rem;
+  grid-column: 1 / -1;
+}
+
+.rounds-table {
+  font-size: 0.78rem;
+  min-width: 640px;
+}
+
+.rounds-table code {
+  font-family: "Cascadia Code", "Fira Code", "Courier New", monospace;
+  font-size: 0.84em;
+}
+
+.rounds-table tbody tr:nth-child(odd) {
+  background: color-mix(in srgb, var(--surface-2) 50%, transparent);
+}
+
+.rounds-table td {
+  vertical-align: top;
+  word-break: break-all;
+}
+
+.sub-h {
+  font-family: var(--font-head);
+  margin-top: 1.1rem;
+  font-size: 1rem;
+  color: var(--accent);
+}
+
+textarea {
+  width: 100%;
+  background: color-mix(in srgb, var(--surface-2) 82%, transparent);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: var(--radius-sm);
+  padding: 0.6rem 0.65rem;
+  font-family: "Cascadia Code", "Fira Code", "Courier New", monospace;
+  font-size: 0.92rem;
+  line-height: 1.4;
+  resize: vertical;
+  min-height: 6em;
+}
+
+.inline-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+@media (max-width: 380px) {
+  .inline-fields {
+    grid-template-columns: 1fr;
+  }
+}
+
+.leak-row {
+  background: color-mix(in srgb, var(--danger) 18%, transparent) !important;
+}
+
+.leak-tag {
+  display: inline-block;
+  margin-left: 0.4rem;
+  padding: 0.05rem 0.4rem;
+  border-radius: 999px;
+  background: var(--danger);
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  vertical-align: middle;
+}
+
+.diff {
+  background: color-mix(in srgb, var(--danger) 35%, transparent);
+  color: var(--text);
+  border-radius: 3px;
+  padding: 0 1px;
+  font-weight: 700;
+}
+
 /* ── Animations ── */
 @keyframes rise {
   from {
