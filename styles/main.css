@@ -606,3 +606,14 @@ textarea {
     width: 100%;
   }
 }
+
+
+/* ═══ Accessibility: WCAG AA contrast overrides (auto-added) ═══ */
+[data-theme="dark"] .leak-tag { background-color: #c15151; } /* was #ff6b6b on #ffffff = 2.78:1 → 4.60:1 */
+
+
+/* ═══ Accessibility: faint-text contrast overrides (auto-added) ═══ */
+[data-theme="light"] .status,
+[data-theme="light"] .glossary > summary { color: #0c7c72; } /* was #0f9b8e, now ≥4.6:1 on theme surfaces */
+[data-theme="light"] .glossary dt,
+[data-theme="light"] .sub-h { color: #b15200; } /* was #ef6f00, now ≥4.6:1 on theme surfaces */
