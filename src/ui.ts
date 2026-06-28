@@ -779,6 +779,12 @@ function template(): string {
       </nav>
 
       <footer role="contentinfo">
+        <p class="links" aria-label="Related demos">Related demos:
+          <a href="https://systemslibrarian.github.io/crypto-lab-iron-letter/" target="_blank" rel="noreferrer">crypto-lab-iron-letter</a>
+          <a href="https://systemslibrarian.github.io/crypto-lab-aes-modes/" target="_blank" rel="noreferrer">crypto-lab-aes-modes</a>
+          <a href="https://systemslibrarian.github.io/crypto-lab-envelope-kms/" target="_blank" rel="noreferrer">crypto-lab-envelope-kms</a>
+          <a href="https://systemslibrarian.github.io/crypto-lab-chacha20-stream/" target="_blank" rel="noreferrer">crypto-lab-chacha20-stream</a>
+        </p>
         <p>So whether you eat or drink or whatever you do, do it all for the glory of God. — 1 Corinthians 10:31</p>
       </footer>
     </main>
