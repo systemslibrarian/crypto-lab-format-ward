@@ -4,6 +4,7 @@
    ──────────────────────────────────────────── */
 
 :root {
+  color-scheme: dark;
   --bg: #0a1216;
   --bg-soft: #112027;
   --surface: #172e38;
@@ -24,6 +25,7 @@
 }
 
 :root[data-theme="light"] {
+  color-scheme: light;
   --bg: #f8fbff;
   --bg-soft: #e6f0fa;
   --surface: #ffffff;
@@ -52,7 +54,7 @@
   left: 0.5rem;
   z-index: 1000;
   padding: 0.6rem 1rem;
-  background: var(--accent);
+  background-color: var(--accent);
   color: #000;
   font-weight: 700;
   border-radius: var(--radius-sm);
@@ -79,6 +81,11 @@
 :focus-visible {
   outline: 3px solid var(--focus-ring);
   outline-offset: 2px;
+}
+
+/* ── Canvas ── */
+html {
+  background-color: var(--bg);
 }
 
 /* ── Body ── */
@@ -148,7 +155,7 @@ h1 {
   padding: 0.34rem 0.8rem;
   font-size: 0.8rem;
   line-height: 1.4;
-  background: color-mix(in srgb, var(--surface-2) 70%, transparent);
+  background-color: color-mix(in srgb, var(--surface-2) 70%, transparent);
 }
 
 .chip.category {
@@ -157,7 +164,7 @@ h1 {
 
 .chip.action {
   color: var(--text);
-  background: color-mix(in srgb, var(--accent-2) 30%, transparent);
+  background-color: color-mix(in srgb, var(--accent-2) 30%, transparent);
   cursor: pointer;
   min-height: var(--tap-min);
   min-width: var(--tap-min);
@@ -176,7 +183,7 @@ h1 {
   justify-content: center;
   border: 1px solid var(--border);
   border-radius: 50%;
-  background: color-mix(in srgb, var(--surface-2) 70%, transparent);
+  background-color: color-mix(in srgb, var(--surface-2) 70%, transparent);
   color: var(--text);
   font-size: 1.25rem;
   cursor: pointer;
@@ -185,7 +192,7 @@ h1 {
   transition: background 0.15s ease;
 }
 .theme-toggle:hover {
-  background: color-mix(in srgb, var(--accent) 25%, transparent);
+  background-color: color-mix(in srgb, var(--accent) 25%, transparent);
 }
 
 /* ── Sections ── */
@@ -194,7 +201,7 @@ h1 {
 .links,
 footer {
   margin-top: 1rem;
-  background: var(--surface);
+  background-color: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 1rem 1.2rem;
@@ -226,7 +233,7 @@ footer {
 
 /* ── Panel ── */
 .panel {
-  background: var(--surface);
+  background-color: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 1rem;
@@ -261,7 +268,7 @@ input,
 select {
   width: 100%;
   margin-top: 0;
-  background: color-mix(in srgb, var(--surface-2) 82%, transparent);
+  background-color: color-mix(in srgb, var(--surface-2) 82%, transparent);
   border: 1px solid var(--border);
   color: var(--text);
   border-radius: var(--radius-sm);
@@ -292,7 +299,7 @@ input {
 button {
   width: 100%;
   margin-top: 0.5rem;
-  background: color-mix(in srgb, var(--accent-2) 22%, var(--surface-2));
+  background-color: color-mix(in srgb, var(--accent-2) 22%, var(--surface-2));
   border: 1px solid var(--border);
   color: var(--text);
   border-radius: var(--radius-sm);
@@ -375,7 +382,7 @@ td {
 }
 
 th {
-  background: var(--surface-2);
+  background-color: var(--surface-2);
   font-weight: 600;
 }
 
@@ -399,7 +406,7 @@ th {
 
 .links a:hover {
   border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
-  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  background-color: color-mix(in srgb, var(--accent) 8%, transparent);
 }
 
 /* ── Footer ── */
@@ -419,7 +426,7 @@ footer p {
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   padding: 0.4rem 0.75rem;
-  background: color-mix(in srgb, var(--surface-2) 50%, transparent);
+  background-color: color-mix(in srgb, var(--surface-2) 50%, transparent);
 }
 
 .glossary > summary {
@@ -475,7 +482,7 @@ footer p {
 }
 
 .rounds-table tbody tr:nth-child(odd) {
-  background: color-mix(in srgb, var(--surface-2) 50%, transparent);
+  background-color: color-mix(in srgb, var(--surface-2) 50%, transparent);
 }
 
 .rounds-table td {
@@ -492,7 +499,7 @@ footer p {
 
 textarea {
   width: 100%;
-  background: color-mix(in srgb, var(--surface-2) 82%, transparent);
+  background-color: color-mix(in srgb, var(--surface-2) 82%, transparent);
   border: 1px solid var(--border);
   color: var(--text);
   border-radius: var(--radius-sm);
@@ -517,7 +524,7 @@ textarea {
 }
 
 .leak-row {
-  background: color-mix(in srgb, var(--danger) 18%, transparent) !important;
+  background-color: color-mix(in srgb, var(--danger) 18%, transparent) !important;
 }
 
 .leak-tag {
@@ -525,7 +532,7 @@ textarea {
   margin-left: 0.4rem;
   padding: 0.05rem 0.4rem;
   border-radius: 999px;
-  background: var(--danger);
+  background-color: var(--danger);
   color: #fff;
   font-size: 0.7rem;
   font-weight: 700;
@@ -534,7 +541,7 @@ textarea {
 }
 
 .diff {
-  background: color-mix(in srgb, var(--danger) 35%, transparent);
+  background-color: color-mix(in srgb, var(--danger) 35%, transparent);
   color: var(--text);
   border-radius: 3px;
   padding: 0 1px;
