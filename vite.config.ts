@@ -1,4 +1,4 @@
-import { defineConfig } from "vite";
+import { defineConfig } from "vitest/config";
 
 function resolvePagesBase(): string {
   const explicitBase = process.env.PAGES_BASE_PATH;
@@ -19,5 +19,8 @@ export default defineConfig(() => ({
   server: {
     host: true,
     port: 5173
+  },
+  test: {
+    include: ["src/**/*.test.ts"]
   }
 }));
