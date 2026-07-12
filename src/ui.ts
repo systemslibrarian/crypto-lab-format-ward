@@ -487,24 +487,29 @@ function template(): string {
   return `
     <a href="#main-content" class="skip-link">Skip to main content</a>
     <main id="main-content" class="shell" role="main">
-      <header class="hero" role="banner">
-        <div class="chip-row" role="list" aria-label="Category and controls">
-          <span class="chip category" role="listitem">Format-Preserving Encryption</span>
-          <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Switch to light mode"></button>
-        </div>
-        <h1>Format Ward</h1>
-        <p class="subtitle">Interactive FF1 and FF3-1 demo over real WebCrypto AES rounds from NIST SP 800-38G.</p>
+      <div class="hero">
+        <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Switch to light mode"></button>
+        <header class="cl-hero">
+          <div class="cl-hero-main">
+            <h1 class="cl-hero-title">Format Ward</h1>
+            <p class="cl-hero-sub">Format-Preserving Encryption · FF1 · FF3-1 · NIST SP 800-38G</p>
+            <p class="cl-hero-desc">Encrypt a value through an AES-driven Feistel network and watch the ciphertext keep the exact length and character set of the plaintext, round by round.</p>
+          </div>
+          <aside class="cl-hero-why" aria-label="Why it matters">
+            <span class="cl-hero-why-label">WHY IT MATTERS</span>
+            <p class="cl-hero-why-text">Legacy schemas, card fields, and databases often can't change a column's length or alphabet. FPE protects the data in place — no schema migration, no widened fields — while still behaving like real encryption.</p>
+          </aside>
+        </header>
         <div class="chip-row" role="list" aria-label="Primitives used">
+          <span class="chip category" role="listitem">Format-Preserving Encryption</span>
           <span class="chip" role="listitem">FF1</span>
           <span class="chip" role="listitem">FF3-1</span>
           <span class="chip" role="listitem">AES-256</span>
           <span class="chip" role="listitem">Feistel Network</span>
         </div>
-      </header>
+      </div>
 
-      <section class="why" aria-labelledby="why-heading">
-        <h2 id="why-heading">Why This Matters</h2>
-        <p>Legacy systems cannot always change field lengths. FPE encrypts sensitive values while keeping schema-compatible formats intact.</p>
+      <section class="why" aria-label="Glossary">
         <details class="glossary">
           <summary>Glossary — terms used on this page</summary>
           <dl>
