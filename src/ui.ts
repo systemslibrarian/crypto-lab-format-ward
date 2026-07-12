@@ -7,7 +7,7 @@ import {
   generateRandomKeyHex,
   hexToBytes,
   importAes256KeyFromHex,
-  importAesKeyFromHex,
+  importFf3KeyFromHex,
   stringToSymbols,
   symbolsToString
 } from "./ff1";
@@ -58,8 +58,12 @@ async function parseAes256Key(id: string): Promise<CryptoKey> {
 
 async function parseKeyPair(id: string): Promise<{ ff1Key: CryptoKey; ff3Key: CryptoKey }> {
   const keyHex = normalizeHex(getInputValue(id));
+  if (hexToBytes(keyHex).length !== 32) {
+    throw new Error("AES-256 key must be exactly 64 hex chars.");
+  }
   const ff1Key = await importAes256KeyFromHex(keyHex);
-  const ff3Key = await importAes256KeyFromHex(keyHex);
+  // FF3-1 runs AES under the byte-reversed key (NIST SP 800-38G Rev.1).
+  const ff3Key = await importFf3KeyFromHex(keyHex);
   return { ff1Key, ff3Key };
 }
 
@@ -98,13 +102,14 @@ async function runVectorSmokeCheck(): Promise<void> {
     const ff1Ct = await ff1Encrypt(ff1Key, 10, ff1Pt, hexToBytes("39383736353433323130"));
     const ff1CtStr = fromDigitSymbols(ff1Ct);
 
-    const ff3Key = await importAesKeyFromHex("ef4359d8d580aa4f7f036d6f04fc6a94");
-    const ff3Pt = toDigitSymbols("890121234567890000");
-    const ff3Ct = await ff3_1Encrypt(ff3Key, 10, ff3Pt, hexToBytes("d8e7920afa330a"));
+    // ACVP FF3-1 AES-128 vector (tg1/tc1). FF3-1 runs AES under the reversed key.
+    const ff3Key = await importFf3KeyFromHex("2de79d232df5585d68ce47882ae256d6");
+    const ff3Pt = toDigitSymbols("3992520240");
+    const ff3Ct = await ff3_1Encrypt(ff3Key, 10, ff3Pt, hexToBytes("cbd09280979564"));
     const ff3CtStr = fromDigitSymbols(ff3Ct);
 
     const ff1Expected = "1001623463";
-    const ff3Expected = "822408390587234504";
+    const ff3Expected = "8901801106";
 
     const ok = ff1CtStr === ff1Expected && ff3CtStr === ff3Expected;
     if (ok) {

@@ -93,6 +93,16 @@ async function aesEncryptFirstBlock(key: CryptoKey, iv: Uint8Array, block: Uint8
   return new Uint8Array(encrypted).slice(0, 16);
 }
 
+/**
+ * NIST SP 800-38G requires radix^n >= 100. Math.pow loses precision / overflows
+ * to Infinity for large n, so we check with BigInt.
+ */
+function assertMinimumDomainFf3(radix: number, n: number): void {
+  if (powBigInt(BigInt(radix), n) < 100n) {
+    throw new Error("Domain size must be at least 100 (radix^n >= 100).");
+  }
+}
+
 function validateDomain(radix: number, values: SymbolArray): void {
   if (radix < 2 || radix > 65536) {
     throw new Error("Radix must be in [2, 65536].");
@@ -157,9 +167,7 @@ export async function ff3_1Encrypt(
   if (n < 2) {
     throw new Error("FF3-1 requires at least 2 symbols.");
   }
-  if (Math.pow(radix, n) < 100) {
-    throw new Error("FF3-1 domain size must be at least 100 (radix^n >= 100).");
-  }
+  assertMinimumDomainFf3(radix, n);
 
   const { tl, tr } = splitTweak56(tweak56);
   const u = Math.ceil(n / 2);
@@ -193,9 +201,7 @@ export async function ff3_1Decrypt(
   if (n < 2) {
     throw new Error("FF3-1 requires at least 2 symbols.");
   }
-  if (Math.pow(radix, n) < 100) {
-    throw new Error("FF3-1 domain size must be at least 100 (radix^n >= 100).");
-  }
+  assertMinimumDomainFf3(radix, n);
 
   const { tl, tr } = splitTweak56(tweak56);
   const u = Math.ceil(n / 2);

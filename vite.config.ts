@@ -21,6 +21,7 @@ export default defineConfig(() => ({
     port: 5173
   },
   test: {
-    include: ["src/**/*.test.ts"]
+    include: ["src/**/*.test.ts"],
+    exclude: ["e2e/**", "node_modules/**", "dist/**"]
   }
 }));

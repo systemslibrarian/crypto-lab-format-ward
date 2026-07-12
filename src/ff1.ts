@@ -62,6 +62,20 @@ export async function importAes256KeyFromHex(hex: string): Promise<CryptoKey> {
   return importAesKeyFromHex(hex);
 }
 
+/**
+ * Import an AES key for FF3-1.
+ *
+ * FF3 / FF3-1 (NIST SP 800-38G, Rev.1) run the block cipher over a
+ * byte-reversed message block AND with a byte-reversed key: every AES call is
+ * CIPH_REV(K)(REV(block)). We fold the key reversal in here at import time so
+ * the round function only has to reverse the block. Omitting this reversal is a
+ * silent correctness bug — round-trip still works, but the ciphertext will not
+ * match any published FF3-1 (ACVP) test vector.
+ */
+export async function importFf3KeyFromHex(hex: string): Promise<CryptoKey> {
+  return importAesKeyFromHex(reverseHex(hex));
+}
+
 function xorBlock(a: Uint8Array, b: Uint8Array): Uint8Array {
   const out = new Uint8Array(16);
   for (let i = 0; i < 16; i += 1) {
@@ -171,6 +185,16 @@ function buildP(radix: number, n: number, u: number, tweakLength: number): Uint8
   return p;
 }
 
+/**
+ * NIST SP 800-38G requires radix^n >= 100. Computing that with Math.pow loses
+ * precision and overflows to Infinity for large n, so we check with BigInt.
+ */
+function assertMinimumDomain(radix: number, n: number): void {
+  if (powBigInt(BigInt(radix), n) < 100n) {
+    throw new Error("Domain size must be at least 100 (radix^n >= 100).");
+  }
+}
+
 function validateDomain(radix: number, values: SymbolArray): void {
   if (radix < 2 || radix > 65536) {
     throw new Error("Radix must be in [2, 65536].");
@@ -225,9 +249,7 @@ export async function ff1Encrypt(
   if (n < 2) {
     throw new Error("FF1 requires at least 2 symbols.");
   }
-  if (Math.pow(radix, n) < 100) {
-    throw new Error("FF1 domain size must be at least 100 (radix^n >= 100).");
-  }
+  assertMinimumDomain(radix, n);
 
   const u = Math.floor(n / 2);
   const v = n - u;
@@ -279,9 +301,7 @@ export async function ff1EncryptTraced(
   if (n < 2) {
     throw new Error("FF1 requires at least 2 symbols.");
   }
-  if (Math.pow(radix, n) < 100) {
-    throw new Error("FF1 domain size must be at least 100 (radix^n >= 100).");
-  }
+  assertMinimumDomain(radix, n);
 
   const u = Math.floor(n / 2);
   const v = n - u;
@@ -333,9 +353,7 @@ export async function ff1Decrypt(
   if (n < 2) {
     throw new Error("FF1 requires at least 2 symbols.");
   }
-  if (Math.pow(radix, n) < 100) {
-    throw new Error("FF1 domain size must be at least 100 (radix^n >= 100).");
-  }
+  assertMinimumDomain(radix, n);
 
   const u = Math.floor(n / 2);
   const v = n - u;
