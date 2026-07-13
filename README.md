@@ -2,7 +2,7 @@
 
 ## What It Is
 
-Format Ward is a browser demo of format-preserving encryption using FF1 and FF3-1 with AES-256 rounds in a Feistel Network construction. It addresses cases where sensitive identifiers must be encrypted without changing length or allowed character set, so legacy schemas and validators can still accept the data. The demo includes encrypt and decrypt flows for PAN-like numbers, masked SSN/phone/ZIP formats, and a custom alphabet panel. This is a symmetric-key model, so the same secret key material is required to decrypt what was encrypted.
+Format Ward is a browser demo of format-preserving encryption using FF1 and FF3-1 with AES-256 rounds in a Feistel Network construction. It addresses cases where sensitive identifiers must be encrypted without changing length or allowed character set, so legacy schemas and validators can still accept the data. The demo opens with a zero-config "Start here" step — one input, one Encrypt button, a live plaintext-vs-ciphertext comparison, and a tweak toggle — so the core idea (shape is preserved, the tweak diversifies) lands before any key management appears. It then includes full encrypt and decrypt flows for PAN-like numbers, masked SSN/phone/ZIP formats, and a custom alphabet panel. This is a symmetric-key model, so the same secret key material is required to decrypt what was encrypted.
 
 ## When to Use It
 
@@ -19,10 +19,11 @@ Format Ward is a browser demo of format-preserving encryption using FF1 and FF3-
 
 The demo supports encrypt and decrypt flows and shows round-trip outputs so you can verify reversibility directly in the browser. You can run FF1 and FF3-1 side by side in the comparison panel, including timing output and PAN-focused Luhn checks on ciphertext results. Exposed controls include AES-256 key generation, FF1 tweak fields, FF3-1 14-hex-character tweak fields, plaintext/format selectors, and custom alphabet input.
 
-Two teaching panels go further than the standard FPE black box:
+A progressive on-ramp and three teaching exhibits go further than the standard FPE black box:
 
-- **Inside FF1 — Feistel Round Walkthrough**: traces a real encryption through all 10 rounds and prints the state at each step (left half A, right half B, the AES-derived round output Y, the new B after modular addition, and the swap). This makes the Feistel structure observable instead of theoretical.
-- **Failure Lab — Why FPE Still Leaks**: three interactive demos that make the security caveats concrete — (1) the equality leak (same plaintext + same key + same tweak → same ciphertext, so frequency analysis still works), (2) the tweak avalanche (flipping one bit of the tweak changes roughly half the output symbols, which is the practical mitigation), and (3) a domain-size calculator that flags when the domain is too small to be called encryption at all.
+1. **Start here — the whole idea in one encrypt**: a minimal first contact with no keys or hex. Type a 16-digit number, press Encrypt, and see the ciphertext side by side with the plaintext, annotated with length and character set ("same 16 digits, still passes Luhn"). A single tweak toggle visibly changes the output. Keys, FF3-1, and raw tweak-hex fields are deferred to a collapsed "Advanced" note and the panels below.
+2. **Inside FF1 — Feistel Round Walkthrough**: traces a real encryption through all 10 rounds. Beyond the full state table, it adds (a) a plain-language gloss of the split parameters n/u/v/b/d, (b) a "Watch the swap" stage that animates the A | B halves round by round with changed digits pulsing and a step/play control, and (c) a "Zoom into one round" mini-pipeline that shows exactly how Y is produced — B's digits → packed bytes → the AES round function (CBC-MAC) → the keystream S → Y → the `(A + Y) mod r^m` addition rendered as a real column sum with the modular wrap struck through. Every value shown is the actual traced integer from the live encryption (guarded by a unit test), so the mechanism is observable, not asserted.
+3. **Failure Lab — Why FPE Still Leaks**: three interactive demos that make the security caveats concrete — (a) the equality leak (same plaintext + same key + same tweak → same ciphertext, so frequency analysis still works), (b) the tweak avalanche (flipping one bit of the tweak changes roughly half the output symbols, which is the practical mitigation), and (c) a domain-size calculator that flags when the domain is too small to be called encryption at all.
 
 An inline glossary near the top of the page defines radix, tweak, domain, Feistel network, round function, and equality leak so the jargon does not stand between the reader and the demo.
 

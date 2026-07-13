@@ -48,7 +48,23 @@ async function scan(page: Page): Promise<void> {
   expect(summary).toEqual([]);
 }
 
+/**
+ * Several teaching regions render only after a button click (the "Start here"
+ * compare, the round-walkthrough pipeline + modular column addition, and the
+ * Feistel swap stage). Trigger them so their injected markup — badges, the
+ * struck-through modular-wrap digits, the AES pipeline steps — is inside the
+ * accessibility scan, not just the empty placeholders.
+ */
+async function populateDynamic(page: Page): Promise<void> {
+  await page.locator('#start-run').click();
+  await expect(page.locator('#start-cipher-out')).toHaveText(/\d{16}/);
+  await page.locator('#rounds-run').click();
+  await expect(page.locator('#round-zoom-body .pipeline')).toBeVisible();
+  await page.locator('#feistel-next').click();
+}
+
 async function runSuite(page: Page): Promise<void> {
+  await populateDynamic(page);
   await revealAll(page);
   await neutralizeMotion(page);
   await scan(page);

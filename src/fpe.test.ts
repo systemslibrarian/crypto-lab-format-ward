@@ -4,6 +4,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 import {
   ff1Decrypt,
   ff1Encrypt,
+  ff1EncryptTraced,
   hexToBytes,
   importAesKeyFromHex,
   importFf3KeyFromHex,
@@ -185,6 +186,45 @@ describe("tweak sensitivity (no silent tweak collapse)", () => {
       const ct = await ff3_1Encrypt(key, 10, pt, hexToBytes(tw));
       const back = await ff3_1Decrypt(key, 10, ct, hexToBytes(tw));
       expect(fromDigitSymbols(back)).toBe("3992520240");
+    }
+  });
+});
+
+/**
+ * The round-walkthrough visualization renders the intermediate values exposed by
+ * ff1EncryptTraced (packed B bytes, the AES-CBC-MAC block, the keystream S, and
+ * the modular column addition). These invariants guarantee the on-screen
+ * pipeline shows the SAME numbers the real cipher computes — the visualization
+ * cannot silently drift from the math.
+ */
+describe("ff1EncryptTraced exposes honest, consistent round internals", () => {
+  it("trace matches ff1Encrypt and every round's (A+Y) mod r^m equals newB", async () => {
+    const key = await importAesKeyFromHex(
+      "2b7e151628aed2a6abf7158809cf4f3cef4359d8d580aa4f7f036d6f04fc6a94",
+    );
+    const pt = toDigitSymbols("0123456789");
+    const tweak = hexToBytes("39383736353433323130");
+
+    const plain = await ff1Encrypt(key, 10, pt, tweak);
+    const traced = await ff1EncryptTraced(key, 10, pt, tweak);
+    expect(traced.ciphertext).toEqual(plain);
+    expect(fromDigitSymbols(traced.ciphertext)).toBe("1001623463"); // S8 vector
+    expect(traced.rounds).toHaveLength(10);
+
+    for (const r of traced.rounds) {
+      // The column addition the UI draws: (A + Y) mod radix^m must equal newB.
+      const expected = (r.aNum + r.y) % r.modulus;
+      expect(r.sumBeforeMod).toBe(r.aNum + r.y);
+      expect(fromDigitSymbols(r.newB)).toBe(
+        expected.toString(10).padStart(r.m, "0"),
+      );
+      // b bytes hold the right half; d bytes form the keystream S read as Y.
+      expect(r.internals.rightBytes.length).toBe(traced.params.b);
+      expect(r.internals.sBytes.length).toBe(traced.params.d);
+      // Y is exactly S interpreted big-endian.
+      let yFromS = 0n;
+      for (const byte of r.internals.sBytes) yFromS = (yFromS << 8n) + BigInt(byte);
+      expect(yFromS).toBe(r.y);
     }
   });
 });

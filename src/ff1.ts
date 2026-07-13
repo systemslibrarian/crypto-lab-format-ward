@@ -206,6 +206,15 @@ function validateDomain(radix: number, values: SymbolArray): void {
   }
 }
 
+export interface FF1RoundInternals {
+  /** B (the right half) packed big-endian into b bytes, as fed to the round fn. */
+  rightBytes: Uint8Array;
+  /** The AES-CBC-MAC output block R (the PRF output before length expansion). */
+  macBlock: Uint8Array;
+  /** The d-byte keystream S, expanded from R, interpreted big-endian as Y. */
+  sBytes: Uint8Array;
+}
+
 async function ff1RoundY(
   key: CryptoKey,
   radix: number,
@@ -214,7 +223,8 @@ async function ff1RoundY(
   i: number,
   b: number,
   d: number,
-  right: SymbolArray
+  right: SymbolArray,
+  internals?: FF1RoundInternals[]
 ): Promise<bigint> {
   const rightNum = numRadix(right, radix);
   const rightBytes = bigintToBytesBE(rightNum, b);
@@ -235,6 +245,9 @@ async function ff1RoundY(
   }
 
   const s = concatBytes(sBlocks).slice(0, d);
+  if (internals) {
+    internals.push({ rightBytes: rightBytes.slice(), macBlock: r.slice(), sBytes: s.slice() });
+  }
   return bytesToBigIntBE(s);
 }
 
@@ -282,6 +295,14 @@ export interface FF1Round {
   newB: SymbolArray;
   aAfter: SymbolArray;
   bAfter: SymbolArray;
+  /** numRadix(A) — the left half interpreted as an integer, the addend for (A+Y). */
+  aNum: bigint;
+  /** (A + Y) before reduction — lets a UI show the modular wrap explicitly. */
+  sumBeforeMod: bigint;
+  /** radix^m — the modulus applied to (A+Y). */
+  modulus: bigint;
+  /** Intermediate values from the AES-driven round function (for visualization). */
+  internals: FF1RoundInternals;
 }
 
 export interface FF1TracedResult {
@@ -317,9 +338,12 @@ export async function ff1EncryptTraced(
     const m = i % 2 === 0 ? u : v;
     const aBefore = a.slice();
     const bBefore = bPart.slice();
-    const y = await ff1RoundY(key, radix, tweak, p, i, b, d, bPart);
+    const captured: FF1RoundInternals[] = [];
+    const y = await ff1RoundY(key, radix, tweak, p, i, b, d, bPart, captured);
     const modulus = powBigInt(BigInt(radix), m);
-    const c = mod(numRadix(a, radix) + y, modulus);
+    const aNum = numRadix(a, radix);
+    const sumBeforeMod = aNum + y;
+    const c = mod(sumBeforeMod, modulus);
     const cArr = strRadix(c, m, radix);
     a = bPart;
     bPart = cArr;
@@ -331,7 +355,11 @@ export async function ff1EncryptTraced(
       y,
       newB: cArr,
       aAfter: a.slice(),
-      bAfter: bPart.slice()
+      bAfter: bPart.slice(),
+      aNum,
+      sumBeforeMod,
+      modulus,
+      internals: captured[0]
     });
   }
 

@@ -144,6 +144,78 @@ function wireKeyGenerators(): void {
   }
 }
 
+// A fixed demo key + tweak for the zero-config "Start here" step. This is real
+// FF1 over real AES-256 — the same primitive the panels below use — just with a
+// preset key so a newcomer meets the behaviour before meeting key management.
+const START_DEMO_KEY_HEX =
+  "2b7e151628aed2a6abf7158809cf4f3cef4359d8d580aa4f7f036d6f04fc6a94";
+const START_TWEAK = "39383736353433323130";
+
+function setBadge(id: string, ok: boolean, label: string): void {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = label;
+  el.classList.remove("shape-idle", "shape-ok", "shape-bad");
+  el.classList.add(ok ? "shape-ok" : "shape-bad");
+}
+
+function wireStartHere(): void {
+  const button = document.getElementById("start-run") as HTMLButtonElement | null;
+  const run = async (): Promise<void> => {
+    disableButton("start-run");
+    setText("start-status", "Running…");
+    try {
+      const raw = getInputValue("start-plain").replace(/\s+/g, "");
+      if (!/^\d{16}$/.test(raw)) {
+        throw new Error("Enter exactly 16 digits (spaces are ignored).");
+      }
+      const key = await importAes256KeyFromHex(START_DEMO_KEY_HEX);
+      const useTweak = (document.getElementById("start-tweak-toggle") as HTMLInputElement | null)?.checked;
+      const tweak = useTweak ? hexToBytes(START_TWEAK) : new Uint8Array();
+
+      const cipher = fromDigitSymbols(await ff1Encrypt(key, 10, toDigitSymbols(raw), tweak));
+
+      setText("start-plain-out", raw);
+      setText("start-cipher-out", cipher);
+      setText("start-plain-annot", `${raw.length} digits · radix 10`);
+      setText(
+        "start-cipher-annot",
+        `${cipher.length} digits · radix 10${useTweak ? " · tweak on" : ""}`
+      );
+
+      const sameShape = cipher.length === raw.length && /^\d+$/.test(cipher);
+      setBadge(
+        "start-shape-badge",
+        sameShape,
+        sameShape ? `same ${cipher.length} digits, same alphabet` : "shape changed"
+      );
+      const luhnOk = luhnValid(cipher);
+      setBadge(
+        "start-luhn-badge",
+        luhnOk,
+        luhnOk ? "still passes Luhn" : "fails Luhn (expected — FPE ≠ valid-PAN)"
+      );
+      setText(
+        "start-status",
+        useTweak
+          ? "Encrypted with a tweak. Toggle it off and re-run: same input, different ciphertext."
+          : "Same length, same character set — that is format preservation. Now toggle the tweak."
+      );
+    } catch (error) {
+      setText("start-status", (error as Error).message);
+      setBadge("start-shape-badge", false, "shape check pending");
+      setBadge("start-luhn-badge", false, "Luhn pending");
+    } finally {
+      enableButton("start-run");
+    }
+  };
+  button?.addEventListener("click", run);
+  document.getElementById("start-tweak-toggle")?.addEventListener("change", () => {
+    const out = document.getElementById("start-cipher-out");
+    if (out && out.textContent && out.textContent !== "—") run();
+  });
+}
+
 function wirePanel1(): void {
   const button = document.getElementById("cc-run") as HTMLButtonElement | null;
   button?.addEventListener("click", async () => {
@@ -324,11 +396,212 @@ function flipTweakBit(tweak: Uint8Array, bitIndex: number): Uint8Array {
   return out;
 }
 
+/** Group hex into byte pairs for readability, e.g. "3f9a" -> "3f 9a". */
+function groupHexBytes(hex: string): string {
+  const padded = hex.length % 2 === 1 ? "0" + hex : hex;
+  return (padded.match(/../g) ?? []).join(" ");
+}
+
+/**
+ * Render the modular column addition (A + Y) mod r^m as an actual right-aligned
+ * column sum, highlighting the leading digits dropped by the modular wrap. All
+ * values are the real traced integers — nothing here is fabricated.
+ */
+function renderColumnAddition(round: FF1Round, radix: number): string {
+  const m = round.m;
+  const aDigits = symbolsToDigits(round.aBefore);
+  const yStr = round.y.toString(radix);
+  const sumStr = round.sumBeforeMod.toString(radix);
+  const resultStr = symbolsToDigits(round.newB);
+  const width = Math.max(aDigits.length, yStr.length, sumStr.length, resultStr.length);
+  const pad = (str: string): string => escapeHtml(str.padStart(width, " "));
+  const label = (str: string): string => str.padStart(9, " ");
+
+  // In the pre-mod sum, the top (sumStr.length - m) digits are dropped by the modulus.
+  const dropped = Math.max(0, sumStr.length - m);
+  let sumMarkup = " ".repeat(width - sumStr.length);
+  for (let i = 0; i < sumStr.length; i += 1) {
+    const ch = escapeHtml(sumStr[i]);
+    sumMarkup += i < dropped ? `<span class="wrap-drop">${ch}</span>` : ch;
+  }
+
+  const note =
+    dropped > 0
+      ? `The leading ${dropped} digit(s) exceed r<sup>m</sup> = ${radix}<sup>${m}</sup> and wrap around (mod), keeping the result exactly ${m} digit(s).`
+      : `The sum already fits in ${m} digit(s), so the modulus changes nothing this round — but it still guarantees the half never grows.`;
+
+  const rule = "─".repeat(width);
+  return `
+    <div class="col-add" role="group" aria-label="Modular column addition A plus Y">
+      <pre class="col-add-grid" tabindex="0" role="region" aria-label="Column addition of A and Y in radix ${radix}">${label("A")}  ${pad(aDigits)}
+${label("+ Y")}  ${pad(yStr)}
+${label("")}  ${rule}
+${label("= sum")}  ${sumMarkup}
+${label("mod r^m")}  ${pad(resultStr)}</pre>
+      <p class="hint col-add-note">${note} <span class="hint">(shown in base ${radix}; the table lists Y in hex.)</span></p>
+    </div>`;
+}
+
+/** Build the visual mini-pipeline for one round: B digits -> bytes -> AES box -> Y -> column add. */
+function renderRoundZoom(round: FF1Round, radix: number): string {
+  const bDigits = symbolsToDigits(round.bBefore);
+  const bytesHex = groupHexBytes(bytesToHex(round.internals.rightBytes));
+  const macHex = groupHexBytes(bytesToHex(round.internals.macBlock));
+  const sHex = groupHexBytes(bytesToHex(round.internals.sBytes));
+  const yHex = round.y.toString(16);
+  return `
+    <ol class="pipeline" aria-label="How Y is derived in round ${round.index}">
+      <li class="pipe-step">
+        <span class="pipe-num">1</span>
+        <div class="pipe-body">
+          <span class="pipe-title">Take B, the right half</span>
+          <code class="pipe-val">${escapeHtml(bDigits)}</code>
+          <span class="hint">the ${round.bBefore.length}-symbol half fed to the round function</span>
+        </div>
+      </li>
+      <li class="pipe-step">
+        <span class="pipe-num">2</span>
+        <div class="pipe-body">
+          <span class="pipe-title">Pack it as a big-endian number, ${round.internals.rightBytes.length} byte(s)</span>
+          <code class="pipe-val">${escapeHtml(bytesHex)}</code>
+          <span class="hint">B read as an integer, then written across b bytes</span>
+        </div>
+      </li>
+      <li class="pipe-step pipe-aes">
+        <span class="pipe-num">3</span>
+        <div class="pipe-body">
+          <span class="pipe-title">AES round function (CBC-MAC over P‖Q)</span>
+          <code class="pipe-val">R = ${escapeHtml(macHex)}</code>
+          <span class="hint">real AES-256 keyed pseudorandom function — this is the cryptographic core</span>
+        </div>
+      </li>
+      <li class="pipe-step">
+        <span class="pipe-num">4</span>
+        <div class="pipe-body">
+          <span class="pipe-title">Expand R to d = ${round.internals.sBytes.length} bytes (S), read as the integer Y</span>
+          <code class="pipe-val">S = ${escapeHtml(sHex)}</code>
+          <code class="pipe-val">Y = 0x${escapeHtml(yHex)}</code>
+        </div>
+      </li>
+      <li class="pipe-step">
+        <span class="pipe-num">5</span>
+        <div class="pipe-body">
+          <span class="pipe-title">Add Y to A, wrap mod r<sup>m</sup> → the new half</span>
+          ${renderColumnAddition(round, radix)}
+        </div>
+      </li>
+    </ol>`;
+}
+
+interface RoundsState {
+  traced: import("./ff1").FF1TracedResult;
+  radix: number;
+  step: number; // 0 = initial split, 1..10 = after round i-1
+  timer: number | null;
+}
+
 function wireRoundsPanel(): void {
+  const state: RoundsState = { traced: null as never, radix: 10, step: 0, timer: null };
+
+  const feistelA = document.getElementById("feistel-a-val");
+  const feistelB = document.getElementById("feistel-b-val");
+  const stepLabel = document.getElementById("feistel-step-label");
+  const zoomSelect = document.getElementById("round-zoom-select") as HTMLSelectElement | null;
+  const zoomBody = document.getElementById("round-zoom-body");
+  const prevBtn = document.getElementById("feistel-prev") as HTMLButtonElement | null;
+  const nextBtn = document.getElementById("feistel-next") as HTMLButtonElement | null;
+  const playBtn = document.getElementById("feistel-play") as HTMLButtonElement | null;
+
+  function halfMarkup(prev: string, cur: string): string {
+    const len = Math.max(prev.length, cur.length);
+    let out = "";
+    for (let i = 0; i < len; i += 1) {
+      const c = cur[i] ?? "";
+      out += prev[i] === c ? escapeHtml(c) : `<span class="digit-pulse">${escapeHtml(c)}</span>`;
+    }
+    return out;
+  }
+
+  function renderStep(): void {
+    if (!state.traced) return;
+    const rounds = state.traced.rounds;
+    let aStr: string;
+    let bStr: string;
+    let prevA = "";
+    let prevB = "";
+    if (state.step === 0) {
+      aStr = symbolsToDigits(rounds[0].aBefore);
+      bStr = symbolsToDigits(rounds[0].bBefore);
+      if (stepLabel) stepLabel.textContent = `initial split · A | B`;
+    } else {
+      const r = rounds[state.step - 1];
+      aStr = symbolsToDigits(r.aAfter);
+      bStr = symbolsToDigits(r.bAfter);
+      prevA = symbolsToDigits(r.aBefore);
+      prevB = symbolsToDigits(r.bBefore);
+      if (stepLabel) stepLabel.textContent = `round ${r.index} of 9 · after swap`;
+    }
+    if (feistelA) feistelA.innerHTML = halfMarkup(prevA, aStr);
+    if (feistelB) feistelB.innerHTML = halfMarkup(prevB, bStr);
+    if (prevBtn) prevBtn.disabled = state.step === 0;
+    if (nextBtn) nextBtn.disabled = state.step >= rounds.length;
+  }
+
+  function stopPlay(): void {
+    if (state.timer !== null) {
+      window.clearInterval(state.timer);
+      state.timer = null;
+    }
+    if (playBtn) playBtn.textContent = "▶ Play";
+  }
+
+  prevBtn?.addEventListener("click", () => {
+    stopPlay();
+    if (state.step > 0) {
+      state.step -= 1;
+      renderStep();
+    }
+  });
+  nextBtn?.addEventListener("click", () => {
+    stopPlay();
+    if (state.traced && state.step < state.traced.rounds.length) {
+      state.step += 1;
+      renderStep();
+    }
+  });
+  playBtn?.addEventListener("click", () => {
+    if (!state.traced) return;
+    if (state.timer !== null) {
+      stopPlay();
+      return;
+    }
+    if (state.step >= state.traced.rounds.length) state.step = 0;
+    playBtn.textContent = "⏸ Pause";
+    state.timer = window.setInterval(() => {
+      if (!state.traced || state.step >= state.traced.rounds.length) {
+        stopPlay();
+        return;
+      }
+      state.step += 1;
+      renderStep();
+    }, 900);
+  });
+
+  zoomSelect?.addEventListener("change", () => {
+    if (!state.traced || !zoomBody) return;
+    const idx = Number(zoomSelect.value);
+    if (Number.isNaN(idx) || zoomSelect.value === "") {
+      zoomBody.innerHTML = "";
+      return;
+    }
+    zoomBody.innerHTML = renderRoundZoom(state.traced.rounds[idx], state.radix);
+  });
+
   const button = document.getElementById("rounds-run") as HTMLButtonElement | null;
   button?.addEventListener("click", async () => {
     disableButton("rounds-run");
     setText("rounds-status", "Running...");
+    stopPlay();
     const tbody = document.getElementById("rounds-tbody");
     if (tbody) tbody.innerHTML = "";
     try {
@@ -339,6 +612,9 @@ function wireRoundsPanel(): void {
       const key = await parseAes256Key("rounds-key");
       const tweak = parseOptionalHexTweak(getInputValue("rounds-tweak"));
       const traced = await ff1EncryptTraced(key, 10, toDigitSymbols(plain), tweak);
+      state.traced = traced;
+      state.radix = traced.params.radix;
+      state.step = 0;
 
       const u = traced.params.u;
       const v = traced.params.v;
@@ -364,6 +640,21 @@ function wireRoundsPanel(): void {
         });
         tbody.innerHTML = rows.join("");
       }
+
+      // Populate the round-zoom picker and default to round 0.
+      if (zoomSelect) {
+        zoomSelect.disabled = false;
+        zoomSelect.innerHTML = traced.rounds
+          .map((r) => `<option value="${r.index}">Round ${r.index} (m=${r.m})</option>`)
+          .join("");
+        zoomSelect.value = "0";
+      }
+      if (zoomBody) zoomBody.innerHTML = renderRoundZoom(traced.rounds[0], state.radix);
+
+      if (prevBtn) prevBtn.disabled = true;
+      if (nextBtn) nextBtn.disabled = false;
+      if (playBtn) playBtn.disabled = false;
+      renderStep();
 
       setText("rounds-final", `Ciphertext: ${fromDigitSymbols(traced.ciphertext)}`);
       setText("rounds-status", "Done.");
@@ -531,6 +822,48 @@ function template(): string {
         <p id="vector-status" aria-live="polite">Running NIST vector smoke checks…</p>
       </section>
 
+      <section class="panel start-here" aria-labelledby="start-heading">
+        <h2 id="start-heading">Start here — the whole idea in one encrypt</h2>
+        <p class="callout">Format-Preserving Encryption keeps the <em>shape</em> of a value: a 16-digit card number encrypts to a different 16-digit number, not to random bytes. Type a card number, press Encrypt, and compare. No keys or hex to think about yet — those live in the panels below once you have the idea.</p>
+        <div class="field">
+          <label for="start-plain">A 16-digit number</label>
+          <input id="start-plain" type="text" inputmode="numeric" pattern="[0-9 ]{16,19}" autocomplete="off" value="4111 1111 1111 1111" />
+        </div>
+        <div class="field toggle-field">
+          <label class="toggle-label" for="start-tweak-toggle">
+            <input id="start-tweak-toggle" type="checkbox" />
+            <span>Add a per-record <em>tweak</em> <span class="hint">(a public label — same number, different ciphertext)</span></span>
+          </label>
+        </div>
+        <button id="start-run" type="button">Encrypt (FF1)</button>
+
+        <div class="fpe-compare" aria-live="polite" aria-atomic="true">
+          <div class="fpe-col">
+            <span class="fpe-col-label">Plaintext</span>
+            <output id="start-plain-out" class="fpe-value">—</output>
+            <span class="fpe-annot" id="start-plain-annot">16 digits · radix 10</span>
+          </div>
+          <div class="fpe-arrow" aria-hidden="true">
+            <span class="fpe-arrow-glyph">→</span>
+            <span class="fpe-arrow-label">FF1 / AES</span>
+          </div>
+          <div class="fpe-col">
+            <span class="fpe-col-label">Ciphertext</span>
+            <output id="start-cipher-out" class="fpe-value">—</output>
+            <span class="fpe-annot" id="start-cipher-annot">press Encrypt</span>
+          </div>
+        </div>
+        <p class="fpe-verdict" id="start-verdict">
+          <span id="start-shape-badge" class="shape-badge shape-idle">shape check pending</span>
+          <span id="start-luhn-badge" class="shape-badge shape-idle">Luhn pending</span>
+        </p>
+        <p class="status" id="start-status" role="status" aria-live="polite">Idle.</p>
+        <details class="advanced-details">
+          <summary>Advanced — keys, FF3-1, and tweak-hex fields</summary>
+          <p class="callout">The four use-case panels below expose the full machinery: your own AES-256 key, the FF1 tweak as raw hex, and the FF3-1 variant with its fixed 14-hex-char tweak. Everything above runs the exact same FF1 primitive with a demo key and a fixed tweak so the core behaviour is what you see first.</p>
+        </details>
+      </section>
+
       <section class="grid" aria-label="Interactive panels">
 
         <article class="panel" aria-labelledby="panel1-heading">
@@ -694,7 +1027,51 @@ function template(): string {
           <input id="rounds-tweak" type="text" spellcheck="false" autocomplete="off" value="39383736353433323130" />
         </div>
         <button id="rounds-run" type="button">Trace Rounds</button>
-        <p id="rounds-split" class="hint">Click <em>Trace Rounds</em> to populate the table.</p>
+        <p id="rounds-split" class="hint">Click <em>Trace Rounds</em> to populate the walkthrough.</p>
+        <dl class="param-gloss" id="rounds-param-gloss" aria-label="What the split parameters mean">
+          <div><dt>n</dt><dd>total length (number of symbols)</dd></div>
+          <div><dt>u</dt><dd>size of the left half A</dd></div>
+          <div><dt>v</dt><dd>size of the right half B</dd></div>
+          <div><dt>b</dt><dd>bytes needed to hold B as a big-endian number</dd></div>
+          <div><dt>d</dt><dd>length of the AES-derived keystream S (source of Y)</dd></div>
+        </dl>
+
+        <div class="feistel-stage" aria-labelledby="feistel-stage-heading">
+          <h3 class="sub-h" id="feistel-stage-heading">Watch the swap</h3>
+          <p class="callout">Each round replaces the right half with <code>(A + Y) mod r<sup>m</sup></code>, then the halves swap positions. Step through and watch which digits change (highlighted) and how B slides into A's place.</p>
+          <div class="feistel-boxes" role="group" aria-label="Feistel half state">
+            <div class="feistel-half" id="feistel-a">
+              <span class="feistel-half-label">A (left)</span>
+              <span class="feistel-half-val" id="feistel-a-val">—</span>
+            </div>
+            <span class="feistel-op" aria-hidden="true">|</span>
+            <div class="feistel-half" id="feistel-b">
+              <span class="feistel-half-label">B (right)</span>
+              <span class="feistel-half-val" id="feistel-b-val">—</span>
+            </div>
+          </div>
+          <div class="feistel-controls">
+            <button id="feistel-prev" type="button" class="mini-btn" disabled>◀ Prev</button>
+            <button id="feistel-play" type="button" class="mini-btn" disabled>▶ Play</button>
+            <button id="feistel-next" type="button" class="mini-btn" disabled>Next ▶</button>
+            <span class="feistel-step-label" id="feistel-step-label" role="status" aria-live="polite">round —</span>
+          </div>
+        </div>
+
+        <div class="round-zoom" aria-labelledby="round-zoom-heading">
+          <h3 class="sub-h" id="round-zoom-heading">Zoom into one round — where Y comes from</h3>
+          <p class="callout">The table below reports Y as a big integer. Here is how that number is actually produced for a single round, step by step. Pick a round to expand:</p>
+          <div class="field round-zoom-picker">
+            <label for="round-zoom-select">Expand round</label>
+            <select id="round-zoom-select" disabled>
+              <option value="">— trace first —</option>
+            </select>
+          </div>
+          <div id="round-zoom-body" class="round-zoom-body" aria-live="polite"></div>
+        </div>
+
+        <details class="rounds-table-details">
+          <summary>Full round table (all 10 rounds)</summary>
         <div class="table-wrap" tabindex="0" role="region" aria-label="FF1 round-by-round state">
           <table class="rounds-table">
             <caption class="sr-only">FF1 Feistel rounds</caption>
@@ -712,6 +1089,7 @@ function template(): string {
             <tbody id="rounds-tbody"></tbody>
           </table>
         </div>
+        </details>
         <p id="rounds-final" class="status" role="status" aria-live="polite">Ciphertext: -</p>
         <p class="status" id="rounds-status" role="status" aria-live="polite">Idle.</p>
       </section>
@@ -810,6 +1188,7 @@ export function initUI(): void {
   app.innerHTML = template();
   setInputValue("fail-key", generateRandomKeyHex(32));
   wireKeyGenerators();
+  wireStartHere();
   wirePanel1();
   wirePanel2();
   wirePanel3();
