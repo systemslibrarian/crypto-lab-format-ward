@@ -1,4 +1,4 @@
-import { SymbolArray } from "./ff1";
+import { MIN_DOMAIN_SIZE, SymbolArray } from "./ff1";
 
 const ZERO_IV = new Uint8Array(16);
 
@@ -94,12 +94,22 @@ async function aesEncryptFirstBlock(key: CryptoKey, iv: Uint8Array, block: Uint8
 }
 
 /**
- * NIST SP 800-38G requires radix^n >= 100. Math.pow loses precision / overflows
- * to Infinity for large n, so we check with BigInt.
+ * Minimum domain size — see MIN_DOMAIN_SIZE in ./ff1.
+ *
+ * The original SP 800-38G (2016) required only radix^minlen >= 100 and merely
+ * recommended 1,000,000. Draft SP 800-38G Rev. 1 — the revision that defines
+ * FF3-1 at all — makes 1,000,000 a requirement, following Durak-Vaudenay and
+ * Hoang-Tessaro-Trieu. Math.pow loses precision / overflows to Infinity for
+ * large n, so the check is done with BigInt.
  */
 function assertMinimumDomainFf3(radix: number, n: number): void {
-  if (powBigInt(BigInt(radix), n) < 100n) {
-    throw new Error("Domain size must be at least 100 (radix^n >= 100).");
+  if (powBigInt(BigInt(radix), n) < MIN_DOMAIN_SIZE) {
+    throw new Error(
+      `Domain too small: ${radix}^${n} is below the Draft SP 800-38G Rev. 1 ` +
+        `minimum of 1,000,000 (radix^minlen >= 10^6). The original SP 800-38G ` +
+        `allowed 100; Rev. 1 raised it because small domains fall to codebook ` +
+        `recovery and to the Durak-Vaudenay / Hoang-Tessaro-Trieu attacks.`
+    );
   }
 }
 

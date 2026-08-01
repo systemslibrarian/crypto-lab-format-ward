@@ -186,12 +186,30 @@ function buildP(radix: number, n: number, u: number, tweakLength: number): Uint8
 }
 
 /**
- * NIST SP 800-38G requires radix^n >= 100. Computing that with Math.pow loses
- * precision and overflows to Infinity for large n, so we check with BigInt.
+ * Minimum domain size.
+ *
+ * The original SP 800-38G (2016) required only radix^minlen >= 100 — enough to
+ * preclude a generic meet-in-the-middle attack on the Feistel structure — and
+ * merely *recommended* 1,000,000. Following Hoang-Tessaro-Trieu and related
+ * analysis, Draft SP 800-38G Rev. 1 promotes that recommendation to a
+ * requirement: "radix^minlen >= 1 000 000", stated in the prerequisites for
+ * FF1.Encrypt / FF1.Decrypt (Rev. 1 2nd public draft, February 2025). Rev. 1 is
+ * the revision that defines FF3-1, and the same bound applies to it. We enforce
+ * the Rev. 1 bound, not the retired 100.
+ *
+ * Computing radix^n with Math.pow loses precision and overflows to Infinity for
+ * large n, so the check is done with BigInt.
  */
+export const MIN_DOMAIN_SIZE = 1_000_000n;
+
 function assertMinimumDomain(radix: number, n: number): void {
-  if (powBigInt(BigInt(radix), n) < 100n) {
-    throw new Error("Domain size must be at least 100 (radix^n >= 100).");
+  if (powBigInt(BigInt(radix), n) < MIN_DOMAIN_SIZE) {
+    throw new Error(
+      `Domain too small: ${radix}^${n} is below the Draft SP 800-38G Rev. 1 ` +
+        `minimum of 1,000,000 (radix^minlen >= 10^6). The original SP 800-38G ` +
+        `allowed 100; Rev. 1 raised it because small domains fall to codebook ` +
+        `recovery and to the Durak-Vaudenay / Hoang-Tessaro-Trieu attacks.`
+    );
   }
 }
 

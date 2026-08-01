@@ -1,5 +1,6 @@
 import {
   FF1Round,
+  MIN_DOMAIN_SIZE,
   bytesToHex,
   ff1Decrypt,
   ff1Encrypt,
@@ -763,9 +764,24 @@ function wireFailLab(): void {
     else if (bits < 40) verdict = "Vulnerable to chosen-plaintext attack with modest compute.";
     else if (bits < 60) verdict = "Adequate against casual attackers; still leaks via determinism.";
     else verdict = "Domain is large; security depends on key/tweak hygiene, not domain size.";
+
+    // Compare against the standard's own floor with BigInt: Math.pow overflows
+    // to Infinity for large len, which would silently pass anything.
+    let exact = 1n;
+    const radixBig = BigInt(radix);
+    for (let i = 0; i < len && exact < MIN_DOMAIN_SIZE; i += 1) exact *= radixBig;
+    const belowFloor = exact < MIN_DOMAIN_SIZE;
+    const gate = belowFloor
+      ? `REJECTED by this demo: below the Draft SP 800-38G Rev. 1 floor of ` +
+        `radix^minlen >= 1,000,000. FF1/FF3-1 here will refuse these parameters. ` +
+        `(The original SP 800-38G allowed 100; Rev. 1 raised it to 10^6 after ` +
+        `Durak-Vaudenay and Hoang-Tessaro-Trieu showed small domains fall.)`
+      : `Meets the Draft SP 800-38G Rev. 1 floor of radix^minlen >= 1,000,000. ` +
+        `Clearing the floor is necessary, not sufficient — read the verdict above.`;
+
     setText(
       "fail-dom-out",
-      `radix^length = ${radix}^${len} = ${sizeStr}  (≈ 2^${bits.toFixed(1)}). ${verdict}`
+      `radix^length = ${radix}^${len} = ${sizeStr}  (≈ 2^${bits.toFixed(1)}). ${verdict} ${gate}`
     );
   };
   document.getElementById("fail-dom-radix")?.addEventListener("input", updateDomain);
@@ -817,7 +833,12 @@ function template(): string {
       </section>
 
       <section class="refs" aria-label="References and verification status">
-        <p>NIST reference: SP 800-38G (FF1, FF3) and SP 800-38G Rev.1 (FF3-1).</p>
+        <p>NIST reference: SP 800-38G (2016, final — specifies FF1 and FF3) and <strong>Draft</strong> SP 800-38G Rev. 1,
+        which defines FF3-1 and raises the minimum domain from radix<sup>minlen</sup> &ge; 100 to
+        radix<sup>minlen</sup> &ge; 1,000,000. Rev. 1 is <em>not</em> a published standard: it is at 2nd public draft
+        (February 2025), and that draft drops FF3/FF3-1 entirely after Beyne&rsquo;s linear cryptanalysis of the tweak
+        schedule, leaving FF1 as the only specified method. This demo still teaches FF3-1 because the comparison is
+        instructive, not because it is approved.</p>
         <p class="warning" role="note">Security note: FF3-1 has published differential cryptanalysis (Durak &amp; Vaudenay, 2017). Use FF1 as default where practical.</p>
         <p id="vector-status" aria-live="polite">Running NIST vector smoke checks…</p>
       </section>
@@ -905,9 +926,15 @@ function template(): string {
             <select id="mask-format">
               <option value="ssn">SSN (XXX-XX-XXXX)</option>
               <option value="phone">US Phone (XXX-XXX-XXXX)</option>
-              <option value="zip">ZIP (XXXXX)</option>
+              <option value="zip">ZIP (XXXXX) — below the Rev. 1 domain floor</option>
             </select>
           </div>
+          <p class="callout">Note on the ZIP option: five decimal digits is a domain of 10<sup>5</sup> = 100,000, under the
+          <strong>radix<sup>minlen</sup> &ge; 1,000,000</strong> floor that Draft SP 800-38G Rev. 1 requires. It cleared the
+          original SP 800-38G bound of 100; it does not clear Rev. 1. This demo enforces Rev. 1, so the option is kept and
+          <em>refuses to run</em> — that rejection is the exhibit. Encrypting a bare 5-digit postal code with FPE means an
+          attacker with oracle access builds the whole codebook in 100,000 queries. The fix is a wider field, not a
+          weaker bound.</p>
           <div class="field">
             <label for="mask-plain">Value</label>
             <input id="mask-plain" type="text" inputmode="text" autocomplete="off" value="123-45-6789" />

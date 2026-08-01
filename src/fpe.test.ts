@@ -235,10 +235,28 @@ describe("input validation and edge cases", () => {
     await expect(ff1Encrypt(key, 10, [0, 1, 2, 10, 4, 5], new Uint8Array())).rejects.toThrow(/outside radix/);
   });
 
-  it("rejects a too-small domain (radix^n < 100)", async () => {
+  it("rejects a too-small domain (radix^n < 1,000,000)", async () => {
     const key = await importAesKeyFromHex("2b7e151628aed2a6abf7158809cf4f3c");
-    // radix 10, n=1 fails the n>=2 check; use radix 3, n=4 -> 3^4=81 < 100.
-    await expect(ff1Encrypt(key, 3, [0, 1, 2, 0], new Uint8Array())).rejects.toThrow(/at least 100/);
+    // radix 10, n=1 fails the n>=2 check; use radix 3, n=4 -> 3^4=81.
+    await expect(ff1Encrypt(key, 3, [0, 1, 2, 0], new Uint8Array())).rejects.toThrow(/Domain too small/);
+  });
+
+  it("rejects a domain that cleared the retired 100 bound but not Rev. 1's 10^6", async () => {
+    // A 5-digit postal code: 10^5 = 100,000. Legal under the original
+    // SP 800-38G (>= 100), illegal under Draft SP 800-38G Rev. 1 (>= 1,000,000).
+    // This is the boundary the demo's ZIP exhibit sits on.
+    const key = await importAesKeyFromHex("2b7e151628aed2a6abf7158809cf4f3c");
+    const key3 = await importFf3KeyFromHex("2de79d232df5585d68ce47882ae256d6");
+    await expect(ff1Encrypt(key, 10, [1, 2, 3, 4, 5], new Uint8Array())).rejects.toThrow(/Domain too small/);
+    await expect(ff3_1Encrypt(key3, 10, [1, 2, 3, 4, 5], hexToBytes("d8e7920afa330a"))).rejects.toThrow(
+      /Domain too small/
+    );
+  });
+
+  it("accepts exactly the Rev. 1 floor (10^6)", async () => {
+    const key = await importAesKeyFromHex("2b7e151628aed2a6abf7158809cf4f3c");
+    const ct = await ff1Encrypt(key, 10, [1, 2, 3, 4, 5, 6], new Uint8Array());
+    expect(ct).toHaveLength(6);
   });
 
   it("domain guard does not overflow for large n (no false Infinity pass)", async () => {
