@@ -226,6 +226,67 @@ footer {
   font-weight: 600;
 }
 
+/* ── Scope / standardization-status banner ──
+   Deliberately the loudest block on the page: the demo runs a mode NIST is
+   removing, so the status has to arrive before the interactive panels do. */
+.scope {
+  margin-top: 1rem;
+  background-color: var(--surface);
+  border: 1px solid var(--danger);
+  border-left: 4px solid var(--danger);
+  border-radius: var(--radius);
+  padding: 1rem 1.2rem;
+}
+
+.scope h2 {
+  margin: 0 0 0.6rem;
+  font-family: var(--font-head);
+  font-size: 1.15rem;
+  color: var(--danger);
+}
+
+.scope-lede {
+  margin: 0 0 0.9rem;
+  line-height: 1.5;
+}
+
+.scope-timeline {
+  margin: 0;
+  padding-left: 1.1rem;
+  display: grid;
+  gap: 0.7rem;
+}
+
+.scope-timeline li {
+  line-height: 1.5;
+}
+
+.scope-when {
+  display: block;
+  font-size: 0.76rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.scope-timeline .scope-now {
+  background-color: var(--surface-2);
+  border-radius: var(--radius);
+  padding: 0.6rem 0.7rem;
+}
+
+.scope-why {
+  margin: 0.5rem 0 0;
+  padding-left: 1.1rem;
+  display: grid;
+  gap: 0.55rem;
+  line-height: 1.5;
+}
+
+.scope q {
+  font-style: italic;
+}
+
 .hint {
   color: var(--muted);
   font-size: 0.82rem;

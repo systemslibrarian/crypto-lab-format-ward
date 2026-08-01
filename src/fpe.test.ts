@@ -145,7 +145,10 @@ describe("round-trip properties", () => {
     const key = await importAesKeyFromHex("0123456789abcdeffedcba98765432100123456789abcdeffedcba9876543210");
     const tweak = hexToBytes("00aabbccdd");
     for (let trial = 0; trial < 25; trial += 1) {
-      const n = 4 + (trial % 12);
+      // Start at 6, not 4. radix^n must clear the Rev. 1 floor of 10^6, so
+      // n=4 (10^4) and n=5 (10^5) are rejected by assertMinimumDomain and are
+      // not valid round-trip inputs. n=6 is exactly the floor and is allowed.
+      const n = 6 + (trial % 12);
       const pt = Array.from({ length: n }, () => Math.floor(Math.random() * 10));
       const ct = await ff1Encrypt(key, 10, pt, tweak);
       const back = await ff1Decrypt(key, 10, ct, tweak);
@@ -158,7 +161,10 @@ describe("round-trip properties", () => {
     const key = await importFf3KeyFromHex("0123456789abcdeffedcba98765432100123456789abcdeffedcba9876543210");
     const tweak = hexToBytes("aabbccddeeff00");
     for (let trial = 0; trial < 25; trial += 1) {
-      const n = 4 + (trial % 12);
+      // Start at 6, not 4. radix^n must clear the Rev. 1 floor of 10^6, so
+      // n=4 (10^4) and n=5 (10^5) are rejected by assertMinimumDomain and are
+      // not valid round-trip inputs. n=6 is exactly the floor and is allowed.
+      const n = 6 + (trial % 12);
       const pt = Array.from({ length: n }, () => Math.floor(Math.random() * 10));
       const ct = await ff3_1Encrypt(key, 10, pt, tweak);
       const back = await ff3_1Decrypt(key, 10, ct, tweak);

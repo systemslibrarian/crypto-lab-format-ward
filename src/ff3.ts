@@ -1,3 +1,25 @@
+/**
+ * FF3-1 — implemented here as a teaching exhibit of a BROKEN mode. Do not
+ * lift this into production.
+ *
+ * Status: FF3-1 was introduced in the initial public draft of SP 800-38G
+ * Rev. 1 (Feb 2019) as a patch to FF3 — the tweak shrank from 64 to 56 bits in
+ * response to Durak-Vaudenay (CRYPTO 2017). It was never published in a final
+ * NIST standard. The 2nd public draft of Rev. 1 (3 Feb 2025) then REMOVED both
+ * FF3 and FF3-1, leaving FF1 as the only specified method. NIST's stated
+ * reason: "Beyne described a weakness in the tweak schedule that affected both
+ * FF3 and FF3-1 but not FF1."
+ *
+ * The break is Beyne, "Linear Cryptanalysis of FF3-1 and FEA" (CRYPTO 2021).
+ * It targets the alternating round-tweak schedule below — note how splitTweak56
+ * derives a fixed (tl, tr) pair and ff3_1Encrypt alternates them across rounds,
+ * XORing in only the round index. That regularity, not the tweak's length, is
+ * the weakness; shrinking the tweak never addressed it. FF3-1 at N = 1000 is
+ * distinguishable from an ideal tweakable block cipher with advantage >= 1/10
+ * using about 2^23 queries.
+ *
+ * Kept runnable so the page can show a broken construction beside a sound one.
+ */
 import { MIN_DOMAIN_SIZE, SymbolArray } from "./ff1";
 
 const ZERO_IV = new Uint8Array(16);

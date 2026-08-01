@@ -744,7 +744,9 @@ function wireFailLab(): void {
       if (ct2El) ct2El.innerHTML = `<code>${diffMarkup(ct1, ct2)}</code>`;
       setText(
         "fail-av-status",
-        `${diffs}/${ct1.length} symbols changed (${pct}%) after flipping one tweak bit. Per-record tweaks defeat equality leakage.`
+        `${diffs}/${ct1.length} symbols changed (${pct}%) after flipping one tweak bit. ` +
+          `Random-oracle expectation for radix 10 is 90% (1 - 1/radix), so this is the shape to expect. ` +
+          `Per-record tweaks defeat cross-record equality leakage — but only if the tweak really varies per record.`
       );
     } catch (error) {
       setText("fail-av-status", (error as Error).message);
@@ -799,8 +801,8 @@ function template(): string {
         <header class="cl-hero">
           <div class="cl-hero-main">
             <h1 class="cl-hero-title">Format Ward</h1>
-            <p class="cl-hero-sub">Format-Preserving Encryption · FF1 · FF3-1 · NIST SP 800-38G</p>
-            <p class="cl-hero-desc">Encrypt a value through an AES-driven Feistel network and watch the ciphertext keep the exact length and character set of the plaintext, round by round.</p>
+            <p class="cl-hero-sub">Format-Preserving Encryption · FF1 (NIST SP 800-38G) · FF3-1 (withdrawn)</p>
+            <p class="cl-hero-desc">Encrypt a value through an AES-driven Feistel network and watch the ciphertext keep the exact length and character set of the plaintext, round by round — then see why NIST is removing half of what is on this page.</p>
           </div>
           <aside class="cl-hero-why" aria-label="Why it matters">
             <span class="cl-hero-why-label">WHY IT MATTERS</span>
@@ -815,6 +817,104 @@ function template(): string {
           <span class="chip" role="listitem">Feistel Network</span>
         </div>
       </div>
+
+      <section class="scope" aria-labelledby="scope-heading">
+        <h2 id="scope-heading">Scope — FF3-1 is being withdrawn, and that is the lesson</h2>
+        <p class="scope-lede">This page is <strong>not</strong> a recommendation to deploy FF3-1. NIST is removing it
+        from the standard. The demo keeps FF3-1 running so you can see the construction that broke sitting next to the
+        one that did not — which teaches far more about small-domain ciphers than a working example alone would.</p>
+
+        <ol class="scope-timeline">
+          <li>
+            <span class="scope-when">March 2016</span>
+            <strong><a href="https://csrc.nist.gov/pubs/sp/800/38/g/final" target="_blank" rel="noopener">SP 800-38G</a>
+            — final, and still the only finished version.</strong>
+            Specifies <strong>FF1</strong> and <strong>FF3</strong>. Requires a domain of only
+            radix<sup>minlen</sup> &ge; 100, with 1,000,000 merely recommended.
+          </li>
+          <li>
+            <span class="scope-when">2017 &ndash; 2018</span>
+            <strong>The attacks land.</strong> Durak and Vaudenay break FF3 outright in
+            <em>Breaking the FF3 Format-Preserving Encryption Standard Over Small Domains</em> (CRYPTO 2017):
+            against a Feistel half-domain of size N, message recovery takes on the order of
+            N<sup>11/6</sup> chosen plaintexts and N<sup>5</sup> time — practical at exactly the domain sizes
+            FPE is reached for. Hoang, Tessaro and Trieu, <em>The Curse of Small Domains</em> (CRYPTO 2018),
+            push known-plaintext message recovery against both FF1 and FF3 down to domains as small as 8 bits.
+          </li>
+          <li>
+            <span class="scope-when">February 2019</span>
+            <strong>SP 800-38G Rev. 1, initial public draft — FF3-1 is invented.</strong> NIST's answer to
+            Durak&ndash;Vaudenay is to shrink FF3's tweak from 64 bits to 56 and rename the result FF3-1.
+            Note what that means: <em>FF3-1 has only ever existed inside a draft.</em> It was never published
+            in a final NIST standard, so "standards-compliant FF3-1" was never quite a true claim.
+          </li>
+          <li>
+            <span class="scope-when">2021</span>
+            <strong>FF3-1 falls as well.</strong> Tim Beyne, <em>Linear Cryptanalysis of FF3-1 and FEA</em>
+            (CRYPTO 2021), attacks the alternating round-tweak <em>schedule</em> rather than the tweak's size.
+            FF3-1 over a domain of N = 1000 can be distinguished from an ideal tweakable block cipher with
+            advantage at least 1/10 using about 2<sup>23</sup> encryption queries — roughly eight million, which
+            is an afternoon on a laptop. Shrinking the tweak had patched the wrong parameter.
+          </li>
+          <li class="scope-now">
+            <span class="scope-when">3 February 2025</span>
+            <strong><a href="https://csrc.nist.gov/pubs/sp/800/38/g/r1/2pd" target="_blank" rel="noopener">SP 800-38G
+            Rev. 1, 2nd public draft</a> — FF3 and FF3-1 are removed.</strong>
+            NIST's announcement is blunt: <q>The encryption method FF3 is no longer specified</q>, because
+            <q>Beyne described a weakness in the tweak schedule that affected both FF3 and FF3-1 but not FF1</q>.
+            The draft's abstract now reads <q>This recommendation specifies the FF1 method</q> — singular.
+            The same draft makes radix<sup>minlen</sup> &ge; 1,000,000 a <em>requirement</em> rather than a
+            recommendation, disallows building the round function from the inverse AES cipher, and disallows
+            floating-point arithmetic. Comments closed 4 April 2025. Because Rev. 1 is still a draft, the 2016
+            document remains the last final text — which is why FF3 is currently both "in the standard" and
+            "known broken."
+          </li>
+        </ol>
+
+        <h3 class="sub-h">Why small-domain encryption is hard</h3>
+        <p>AES gets to be conservative: a 128-bit block, and an adversary who wants the whole codebook needs
+        2<sup>128</sup> queries. Format-preserving encryption gives that up by definition — it is a permutation on
+        <em>your</em> domain, not on 128-bit blocks. Encrypting a 9-digit identifier means the entire domain is
+        10<sup>9</sup> values, about 30 bits. Three consequences follow, and together they are why this family keeps
+        breaking:</p>
+        <ul class="scope-why">
+          <li><strong>The codebook is finite and often reachable.</strong> Security cannot rest on the domain being
+          large, because it is not. An attacker with oracle access to a 5-digit field enumerates all 100,000 values
+          and is done — no cryptanalysis required. That is why Rev. 1 promotes the 10<sup>6</sup> floor from advice
+          to a rule, and why the domain calculator below refuses parameters under it.</li>
+          <li><strong>Feistel rounds are weak when the halves are tiny.</strong> A Feistel network's security
+          argument (Luby&ndash;Rackoff and its successors) is asymptotic in the half-width. Split a 6-digit value and
+          each half carries about 10 bits, so the round function is a pseudorandom function on a 1000-element set.
+          Eight or ten rounds of that does not converge on a random permutation the way ten AES rounds do on 128
+          bits — a measurable distinguishing advantage survives, and measurable advantage is what
+          Durak&ndash;Vaudenay and Beyne convert into recovered plaintext.</li>
+          <li><strong>The tweak schedule is itself an attack surface.</strong> This is the specific thing that killed
+          FF3-1, and the part most summaries miss. FF3 and FF3-1 split the tweak into two halves and use them on
+          alternating rounds, XORing in only the round number. That regularity lets an attacker line up encryptions
+          under <em>related</em> tweaks so that round functions coincide, and Beyne's linear cryptanalysis exploits
+          exactly that. FF1 does not share the weakness: it feeds the whole tweak, the round number, and the length
+          parameters into every round's PRF input, so no two rounds reuse a round function. Making the tweak shorter —
+          the FF3-1 fix — never addressed the schedule at all, which is why FF3-1 bought only two years.</li>
+        </ul>
+
+        <h3 class="sub-h">So what should you actually use?</h3>
+        <p>Work backwards from why FPE was reached for in the first place:</p>
+        <ul class="scope-why">
+          <li><strong>If you can change the schema, do that and use ordinary AEAD.</strong> AES-GCM or
+          ChaCha20-Poly1305 gives confidentiality <em>and</em> integrity, which no FPE mode provides. Most production
+          FPE deployments exist to avoid a column migration, not because FPE was the better primitive.</li>
+          <li><strong>If you need stable tokens for joins or lookups, use a tokenization vault.</strong> Generate a
+          random token, store the token-to-value mapping encrypted, hand out the token. It preserves any format you
+          like, leaks nothing beyond equality, and has no cryptanalysis to track. This is what most
+          "format-preserving" requirements actually want.</li>
+          <li><strong>If you need determinism without a vault, use a deterministic AEAD such as AES-SIV</strong>
+          (RFC 5297). It still leaks equality — inherent to determinism — but it is not a small-domain construction,
+          so it inherits none of the problems above.</li>
+          <li><strong>If the format genuinely cannot change, use FF1</strong>, with a domain of at least
+          10<sup>6</sup> and a real per-record tweak. FF1 is the only method Rev. 1 still specifies, and no practical
+          attack is known within those bounds. Do not put FF3 or FF3-1 in anything new.</li>
+        </ul>
+      </section>
 
       <section class="why" aria-label="Glossary">
         <details class="glossary">
@@ -833,13 +933,19 @@ function template(): string {
       </section>
 
       <section class="refs" aria-label="References and verification status">
-        <p>NIST reference: SP 800-38G (2016, final — specifies FF1 and FF3) and <strong>Draft</strong> SP 800-38G Rev. 1,
-        which defines FF3-1 and raises the minimum domain from radix<sup>minlen</sup> &ge; 100 to
-        radix<sup>minlen</sup> &ge; 1,000,000. Rev. 1 is <em>not</em> a published standard: it is at 2nd public draft
-        (February 2025), and that draft drops FF3/FF3-1 entirely after Beyne&rsquo;s linear cryptanalysis of the tweak
-        schedule, leaving FF1 as the only specified method. This demo still teaches FF3-1 because the comparison is
-        instructive, not because it is approved.</p>
-        <p class="warning" role="note">Security note: FF3-1 has published differential cryptanalysis (Durak &amp; Vaudenay, 2017). Use FF1 as default where practical.</p>
+        <p class="warning" role="note">Security note: FF3-1 is removed from Draft SP 800-38G Rev. 1 and must not be used
+        in new systems. Use FF1 (domain &ge; 10<sup>6</sup>), or better, one of the alternatives in the Scope section above.</p>
+        <p>Primary sources:
+          <a href="https://csrc.nist.gov/pubs/sp/800/38/g/final" target="_blank" rel="noopener">SP 800-38G (2016, final)</a> ·
+          <a href="https://csrc.nist.gov/pubs/sp/800/38/g/r1/2pd" target="_blank" rel="noopener">Draft SP 800-38G Rev. 1, 2nd public draft (Feb 2025)</a> ·
+          <a href="https://eprint.iacr.org/2017/521" target="_blank" rel="noopener">Durak &amp; Vaudenay, CRYPTO 2017</a> (breaks FF3) ·
+          <a href="https://eprint.iacr.org/2018/556" target="_blank" rel="noopener">Hoang, Tessaro &amp; Trieu, CRYPTO 2018</a> (small domains) ·
+          <a href="https://eprint.iacr.org/2021/815" target="_blank" rel="noopener">Beyne, CRYPTO 2021</a> (breaks FF3-1).
+        </p>
+        <p class="hint">Note on attribution: Durak&ndash;Vaudenay broke FF3, the 64-bit-tweak original. FF3-1 was created
+        in response to it, so citing that paper as the reason FF3-1 is unsafe is a common but incorrect shortcut — the
+        paper that broke FF3-1 itself is Beyne (2021), and it is a linear attack on the tweak schedule, not a
+        differential one.</p>
         <p id="vector-status" aria-live="polite">Running NIST vector smoke checks…</p>
       </section>
 
@@ -961,8 +1067,14 @@ function template(): string {
 
         <article class="panel" aria-labelledby="panel3-heading">
           <h3 id="panel3-heading">Panel 3 — FF1 vs FF3-1 Comparison</h3>
-          <p class="callout">FF1 is NIST-preferred for new systems. FF3-1 remains acceptable with caveats.</p>
-          <p class="callout">Round structure: FF1 uses 10 rounds and variable-length tweak handling; FF3-1 uses 8 rounds with 56-bit tweak split into 28-bit halves.</p>
+          <p class="callout"><strong>FF1 is the only method NIST still specifies. FF3-1 is removed from Draft
+          SP 800-38G Rev. 1 — it is here as a broken-construction exhibit, not as an option.</strong> Run both and
+          note that they are equally convincing to look at: the output of a broken cipher is indistinguishable from
+          the output of a sound one by eye. That is the point of the panel.</p>
+          <p class="callout">Round structure, and why it matters: FF1 uses 10 rounds and mixes the full tweak, the
+          round number, and the length parameters into every round's PRF input. FF3-1 uses 8 rounds and splits a
+          56-bit tweak into two 28-bit halves used on alternating rounds, XORing in only the round index. That
+          alternating schedule is the structure Beyne's linear cryptanalysis attacks.</p>
           <div class="field">
             <label for="cmp-plain">Plaintext (digits only)</label>
             <input id="cmp-plain" type="text" inputmode="numeric" autocomplete="off" value="890121234567890000" />
@@ -994,8 +1106,9 @@ function template(): string {
                 <tr><th scope="col">Algorithm</th><th scope="col">Status</th><th scope="col">Security note</th></tr>
               </thead>
               <tbody>
-                <tr><td>FF1</td><td>Recommended</td><td>No known practical attack in standard parameter bounds.</td></tr>
-                <tr><td>FF3-1</td><td>Acceptable with caveats</td><td>Differential attack reduces margins (Durak &amp; Vaudenay, 2017).</td></tr>
+                <tr><td>FF1</td><td>Specified — the only one left</td><td>No known practical attack at radix<sup>minlen</sup> &ge; 10<sup>6</sup>. Below that floor, Hoang&ndash;Tessaro&ndash;Trieu (2018) applies to FF1 too.</td></tr>
+                <tr><td>FF3</td><td>Broken; removed from Rev. 1</td><td>Message recovery in about N<sup>11/6</sup> chosen plaintexts, N<sup>5</sup> time (Durak &amp; Vaudenay, 2017).</td></tr>
+                <tr><td>FF3-1</td><td>Broken; removed from Rev. 1</td><td>Linear attack on the alternating tweak schedule: N = 1000 distinguished with advantage &ge; 1/10 in about 2<sup>23</sup> queries (Beyne, 2021).</td></tr>
               </tbody>
             </table>
           </div>
@@ -1157,7 +1270,12 @@ function template(): string {
         <p class="status" id="fail-eq-status" role="status" aria-live="polite">Idle.</p>
 
         <h3 class="sub-h">2. Tweak avalanche — one flipped bit ≈ whole new output</h3>
-        <p class="callout">A per-record tweak diversifies the output without needing a new key. Flip one bit of the tweak and the ciphertext changes in roughly half the symbols — the practical fix for the equality leak above.</p>
+        <p class="callout">A per-record tweak diversifies the output without needing a new key. Flip one bit of the
+        tweak and almost every symbol changes — the practical fix for the equality leak above. Expect roughly
+        <strong>90%</strong>, not 50%: "avalanche" is a statement about <em>bits</em>, but this readout counts
+        <em>decimal symbols</em>, and a freshly randomized digit collides with the old one 1 time in 10. So the
+        random-oracle expectation here is 1 &minus; 1/radix = 90%, and a result near 50% would mean something was
+        wrong.</p>
         <div class="field">
           <label for="fail-av-plain">Plaintext (digits)</label>
           <input id="fail-av-plain" type="text" inputmode="numeric" autocomplete="off" value="987654321098" />
