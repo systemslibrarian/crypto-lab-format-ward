@@ -110,6 +110,13 @@ body {
   padding-right: env(safe-area-inset-right, 0);
 }
 
+/* The page footer is a sibling of <main> (so contentinfo is a top-level
+   landmark) but keeps the shell width; it only needs the tighter top gap it
+   had when it was still inside the shell. */
+.shell-foot {
+  margin-top: 1rem;
+}
+
 /* ── Hero ── */
 .hero {
   position: relative;
@@ -580,6 +587,12 @@ textarea {
     margin-bottom: 2rem;
   }
 
+  /* The footer carries .shell for width, but keeps its own card padding. */
+  .shell-foot {
+    padding: 1rem 1.2rem;
+    padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0));
+  }
+
   .hero {
     border-radius: var(--radius);
     padding: 1rem;
@@ -615,7 +628,6 @@ textarea {
 }
 
 
-/* BEGIN cl-hero standard — managed, keep in sync across fleet */
 /* This lab exposes --muted (not --text-dim); alias it so the shared block maps
    onto this theme and passes axe contrast in both dark and light. */
 .cl-hero{--text-dim:var(--muted);display:flex;align-items:flex-start;justify-content:space-between;gap:clamp(1rem,4vw,3rem);flex-wrap:wrap;margin:clamp(1rem,3vw,2rem) 0 1.5rem;}
@@ -626,8 +638,7 @@ textarea {
 .cl-hero-why{flex:0 1 min(40%,26rem);min-width:min(100%,15rem);border:1px solid var(--border);border-radius:10px;padding:.85rem 1.05rem;background:color-mix(in oklab,var(--accent) 6%,transparent);}
 .cl-hero-why-label{display:block;font-size:.68rem;font-weight:700;letter-spacing:.14em;color:var(--text-dim);}
 .cl-hero-why-text{margin:.35rem 0 0;font-size:.95rem;line-height:1.5;color:var(--text);}
-@media (max-width:640px){.cl-hero{flex-direction:column;}.cl-hero-why{flex-basis:auto;width:100%;}}
-/* END cl-hero standard */
+@media (max-width:640px){.cl-hero{flex-direction:column;}.cl-hero-why{flex-basis:auto;width:100%;}.cl-hero-main{flex-basis:auto;min-width:0;}}
 
 /* ── Start here (first-contact) panel ── */
 .start-here {
@@ -888,7 +899,9 @@ textarea {
   margin-top: 0;
   padding: 0.45rem 0.8rem;
   font-size: 0.85rem;
-  min-height: 0;
+  /* WCAG 2.5.5: the Feistel stepper is a primary control — keep a 44px target */
+  min-height: var(--tap-min);
+  min-width: var(--tap-min);
 }
 
 .mini-btn:disabled {

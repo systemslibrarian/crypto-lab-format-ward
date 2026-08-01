@@ -777,7 +777,7 @@ function template(): string {
   const key = generateRandomKeyHex(32);
   return `
     <a href="#main-content" class="skip-link">Skip to main content</a>
-    <main id="main-content" class="shell" role="main">
+    <main id="main-content" class="shell" tabindex="-1">
       <div class="hero">
         <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Switch to light mode"></button>
         <header class="cl-hero">
@@ -818,7 +818,7 @@ function template(): string {
 
       <section class="refs" aria-label="References and verification status">
         <p>NIST reference: SP 800-38G (FF1, FF3) and SP 800-38G Rev.1 (FF3-1).</p>
-        <p class="warning" role="alert">Security note: FF3-1 has published differential cryptanalysis (Durak &amp; Vaudenay, 2017). Use FF1 as default where practical.</p>
+        <p class="warning" role="note">Security note: FF3-1 has published differential cryptanalysis (Durak &amp; Vaudenay, 2017). Use FF1 as default where practical.</p>
         <p id="vector-status" aria-live="polite">Running NIST vector smoke checks…</p>
       </section>
 
@@ -1166,16 +1166,17 @@ function template(): string {
         <a href="https://github.com/systemslibrarian/crypto-lab-format-ward" target="_blank" rel="noreferrer">GitHub repo</a>
       </nav>
 
-      <footer role="contentinfo">
-        <p class="links" aria-label="Related demos">Related demos:
-          <a href="https://systemslibrarian.github.io/crypto-lab-iron-letter/" target="_blank" rel="noreferrer">crypto-lab-iron-letter</a>
-          <a href="https://systemslibrarian.github.io/crypto-lab-aes-modes/" target="_blank" rel="noreferrer">crypto-lab-aes-modes</a>
-          <a href="https://systemslibrarian.github.io/crypto-lab-envelope-kms/" target="_blank" rel="noreferrer">crypto-lab-envelope-kms</a>
-          <a href="https://systemslibrarian.github.io/crypto-lab-chacha20-stream/" target="_blank" rel="noreferrer">crypto-lab-chacha20-stream</a>
-        </p>
-        <p>So whether you eat or drink or whatever you do, do it all for the glory of God. — 1 Corinthians 10:31</p>
-      </footer>
     </main>
+
+    <footer class="shell shell-foot" role="contentinfo">
+      <p class="links">Related demos:
+        <a href="https://systemslibrarian.github.io/crypto-lab-iron-letter/" target="_blank" rel="noreferrer">crypto-lab-iron-letter</a>
+        <a href="https://systemslibrarian.github.io/crypto-lab-aes-modes/" target="_blank" rel="noreferrer">crypto-lab-aes-modes</a>
+        <a href="https://systemslibrarian.github.io/crypto-lab-envelope-kms/" target="_blank" rel="noreferrer">crypto-lab-envelope-kms</a>
+        <a href="https://systemslibrarian.github.io/crypto-lab-chacha20-stream/" target="_blank" rel="noreferrer">crypto-lab-chacha20-stream</a>
+      </p>
+      <p>So whether you eat or drink or whatever you do, do it all for the glory of God. — 1 Corinthians 10:31</p>
+    </footer>
   `;
 }
 
