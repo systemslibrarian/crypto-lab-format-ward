@@ -15,6 +15,12 @@
   --accent-2: #2ec4b6;
   --danger: #ff6b6b;
   --border: #2a4b58;
+  /* Control boundaries only (inputs, selects, textareas, buttons). Those controls
+     are filled with washes of --surface-2 that land at 1.07-1.14:1 against the
+     .surface card behind them, so the border is the sole boundary and WCAG 2.1
+     SC 1.4.11 requires 3:1. --border stays as-is for decorative rules (cards,
+     chips, tables, dividers). */
+  --border-strong: #4c89a0;
   --shadow: rgba(0, 0, 0, 0.28);
   --focus-ring: var(--accent);
   --font-head: "Space Grotesk", "Segoe UI", system-ui, sans-serif;
@@ -36,6 +42,7 @@
   --accent-2: #0f9b8e;
   --danger: #b13030;
   --border: #c6d8e7;
+  --border-strong: #5e90bb;
   --shadow: rgba(20, 30, 40, 0.12);
   --focus-ring: var(--accent-2);
 }
@@ -276,7 +283,7 @@ select {
   width: 100%;
   margin-top: 0;
   background-color: color-mix(in srgb, var(--surface-2) 82%, transparent);
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-strong);
   color: var(--text);
   border-radius: var(--radius-sm);
   padding: 0.6rem 0.65rem;
@@ -307,7 +314,7 @@ button {
   width: 100%;
   margin-top: 0.5rem;
   background-color: color-mix(in srgb, var(--accent-2) 22%, var(--surface-2));
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-strong);
   color: var(--text);
   border-radius: var(--radius-sm);
   padding: 0.65rem 0.85rem;
@@ -507,7 +514,7 @@ footer p {
 textarea {
   width: 100%;
   background-color: color-mix(in srgb, var(--surface-2) 82%, transparent);
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-strong);
   color: var(--text);
   border-radius: var(--radius-sm);
   padding: 0.6rem 0.65rem;
