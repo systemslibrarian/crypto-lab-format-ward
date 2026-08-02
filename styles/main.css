@@ -1104,3 +1104,41 @@ textarea {
 [data-theme="light"] .glossary dt,
 [data-theme="light"] .sub-h,
 [data-theme="light"] .param-gloss dt { color: #b15200; } /* was #ef6f00, now ≥4.6:1 on theme surfaces */
+
+/* ── Codebook attack lab ── */
+.attack-lab .field { margin: 0.6rem 0; }
+.attack-output[hidden] { display: none; }
+.attack-output { margin-top: 0.8rem; }
+
+.attack-rows {
+  margin: 0.4rem 0 0.8rem;
+  display: grid;
+  gap: 0.35rem;
+}
+.attack-rows > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.3rem;
+}
+.attack-rows dt { color: var(--muted); margin: 0; }
+.attack-rows dd { margin: 0; }
+.attack-rows .mono {
+  font-family: "Cascadia Code", "Fira Code", "Courier New", monospace;
+  font-size: 0.9rem;
+  overflow-wrap: anywhere;
+}
+
+.attack-verdict {
+  border-radius: 10px;
+  padding: 0.6rem 0.8rem;
+  border: 1px solid var(--border-strong);
+  font-weight: 700;
+  line-height: 1.5;
+}
+.attack-verdict.leaked {
+  color: var(--danger);
+  border-color: var(--danger);
+}

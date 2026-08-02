@@ -13,6 +13,7 @@ import {
   symbolsToString
 } from "./ff1";
 import { ff3_1Decrypt, ff3_1Encrypt } from "./ff3";
+import { runCodebookAttack, feasibility } from "./attack";
 import {
   MaskedFormat,
   fromDigitSymbols,
@@ -916,6 +917,49 @@ function template(): string {
         </ul>
       </section>
 
+      <section class="panel attack-lab" aria-labelledby="attack-heading">
+        <h2 id="attack-heading">Live: break FF3-1 by codebook recovery</h2>
+        <p class="callout">
+          The timeline above <em>describes</em> the break. This runs one. A defender encrypts a
+          secret value with real FF3-1 under a random key and tweak the attacker never sees; the
+          attacker gets only the ciphertext and an encryption oracle (the same key + tweak, key
+          unknown — exactly a tokenization API). It enumerates the whole small domain, builds the
+          plaintext&rarr;ciphertext codebook, and reads off the secret. No key, no cryptanalysis.
+        </p>
+        <p class="hint">
+          <strong>Honest scale.</strong> The <em>specific</em> Durak&ndash;Vaudenay / Beyne
+          cryptanalysis of FF3-1's tweak schedule needs ~2<sup>23</sup> (≈8 million) chosen queries —
+          hours of AES, out of browser reach, so it is cited, not run. Codebook recovery is what
+          those attacks reduce the cipher to on realistic field sizes, and it is exactly what the
+          <em>≥10<sup>6</sup></em> minimum-domain requirement exists to stop. Everything below uses
+          the real FF3-1 primitive; nothing is hardcoded.
+        </p>
+        <div class="field">
+          <label for="attack-length">Domain: number of decimal digits (radix 10)</label>
+          <select id="attack-length">
+            <option value="3">3 digits — 1,000 values</option>
+            <option value="4" selected>4 digits — 10,000 values</option>
+          </select>
+        </div>
+        <button id="attack-run" type="button">Run the codebook attack</button>
+        <p class="status" id="attack-status" role="status" aria-live="polite">Idle.</p>
+        <div id="attack-output" class="attack-output" hidden>
+          <dl class="attack-rows">
+            <div><dt>Defender's secret plaintext</dt><dd id="attack-secret" class="mono">—</dd></div>
+            <div><dt>Ciphertext handed to attacker</dt><dd id="attack-target" class="mono">—</dd></div>
+            <div><dt>Recovered by codebook (no key)</dt><dd id="attack-recovered" class="mono">—</dd></div>
+            <div><dt>Oracle queries spent</dt><dd id="attack-queries" class="mono">—</dd></div>
+          </dl>
+          <p id="attack-verdict" role="status"></p>
+        </div>
+        <h3 class="sub-h">The numbers, computed for these parameters</h3>
+        <dl class="attack-rows attack-feasibility">
+          <div><dt>Codebook cost (queries = domain size)</dt><dd id="feas-codebook" class="mono">—</dd></div>
+          <div><dt>Clears the NIST 10<sup>6</sup> floor?</dt><dd id="feas-floor" class="mono">—</dd></div>
+          <div><dt>Beyne (2021) FF3-1 distinguisher (cited)</dt><dd id="feas-beyne" class="mono">—</dd></div>
+        </dl>
+      </section>
+
       <section class="why" aria-label="Glossary">
         <details class="glossary">
           <summary>Glossary — terms used on this page</summary>
@@ -1325,6 +1369,61 @@ function template(): string {
   `;
 }
 
+function renderFeasibility(length: number): void {
+  const f = feasibility(10, length);
+  const nf = new Intl.NumberFormat("en-US");
+  setText("feas-codebook", `${nf.format(f.codebookQueries)} queries — ${f.codebookFeasible ? "browser-feasible" : "infeasible in a browser"}`);
+  setText(
+    "feas-floor",
+    f.meetsNistFloor
+      ? `yes (${nf.format(f.domainSize)} ≥ ${nf.format(f.nistFloor)})`
+      : `NO — ${nf.format(f.domainSize)} is below ${nf.format(f.nistFloor)}; the standard forbids this domain`,
+  );
+  setText("feas-beyne", `≈ ${nf.format(f.beyneQueries)} chosen queries (2^23) — not run here`);
+}
+
+function wireCodebookAttack(): void {
+  const lengthSelect = document.getElementById("attack-length") as HTMLSelectElement | null;
+  const button = document.getElementById("attack-run") as HTMLButtonElement | null;
+  const output = document.getElementById("attack-output");
+
+  const currentLength = (): number => Number.parseInt(lengthSelect?.value ?? "4", 10);
+  renderFeasibility(currentLength());
+  lengthSelect?.addEventListener("change", () => renderFeasibility(currentLength()));
+
+  button?.addEventListener("click", async () => {
+    const length = currentLength();
+    disableButton("attack-run");
+    setText("attack-status", `Building the codebook over ${new Intl.NumberFormat("en-US").format(10 ** length)} values…`);
+    try {
+      const r = await runCodebookAttack(10, length);
+      if (output) output.hidden = false;
+      setText("attack-secret", r.secret);
+      setText("attack-target", r.target);
+      setText("attack-recovered", r.recovered ?? "(not found)");
+      setText("attack-queries", new Intl.NumberFormat("en-US").format(r.queries));
+      const verdict = document.getElementById("attack-verdict");
+      if (verdict) {
+        if (r.recovered_ok) {
+          verdict.className = "attack-verdict leaked";
+          verdict.setAttribute("data-verdict", "recovered");
+          verdict.textContent =
+            "BROKEN — the secret plaintext was recovered with no key, purely by enumerating the domain. This is why small-domain FPE is unsafe and why the 10^6 floor is a hard requirement.";
+        } else {
+          verdict.className = "attack-verdict";
+          verdict.setAttribute("data-verdict", "failed");
+          verdict.textContent = "The codebook did not resolve the target (unexpected).";
+        }
+      }
+      setText("attack-status", "Done.");
+    } catch (err) {
+      setText("attack-status", `Attack error: ${(err as Error).message}`);
+    } finally {
+      enableButton("attack-run");
+    }
+  });
+}
+
 export function initUI(): void {
   const app = document.getElementById("app");
   if (!app) {
@@ -1341,5 +1440,6 @@ export function initUI(): void {
   wirePanel4();
   wireRoundsPanel();
   wireFailLab();
+  wireCodebookAttack();
   runVectorSmokeCheck();
 }

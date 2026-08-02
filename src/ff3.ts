@@ -194,12 +194,29 @@ export async function ff3_1Encrypt(
   plaintext: SymbolArray,
   tweak56: Uint8Array<ArrayBufferLike>
 ): Promise<SymbolArray> {
+  assertMinimumDomainFf3(radix, plaintext.length);
+  return ff3_1EncryptUnchecked(key, radix, plaintext, tweak56);
+}
+
+/**
+ * FF3-1 encryption WITHOUT the SP 800-38G Rev. 1 minimum-domain guard. This
+ * exists only for the codebook-recovery attack exhibit: a real attacker does
+ * not honour NIST's ≥10^6 rule, and demonstrating the small-domain break
+ * requires operating the cipher exactly where the standard forbids it. Never
+ * use this for anything but the attack demo — ff3_1Encrypt is the checked
+ * entry point.
+ */
+export async function ff3_1EncryptUnchecked(
+  key: CryptoKey,
+  radix: number,
+  plaintext: SymbolArray,
+  tweak56: Uint8Array<ArrayBufferLike>
+): Promise<SymbolArray> {
   validateDomain(radix, plaintext);
   const n = plaintext.length;
   if (n < 2) {
     throw new Error("FF3-1 requires at least 2 symbols.");
   }
-  assertMinimumDomainFf3(radix, n);
 
   const { tl, tr } = splitTweak56(tweak56);
   const u = Math.ceil(n / 2);
