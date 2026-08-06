@@ -658,6 +658,11 @@ function wireRoundsPanel(): void {
       if (playBtn) playBtn.disabled = false;
       renderStep();
 
+      // The round table starts hidden: before a trace it would be a
+      // header-only shell — a focusable scroll region with nothing in it,
+      // and a table whose <th>s have no data cells to describe.
+      document.getElementById("rounds-table-details")?.removeAttribute("hidden");
+
       setText("rounds-final", `Ciphertext: ${fromDigitSymbols(traced.ciphertext)}`);
       setText("rounds-status", "Done.");
     } catch (error) {
@@ -705,6 +710,9 @@ function wireFailLab(): void {
           })
           .join("");
       }
+      // Hidden until it has rows, like #attack-output: a header-only table is
+      // a focusable scroll region with nothing in it.
+      document.getElementById("fail-eq-tablewrap")?.removeAttribute("hidden");
       const dupes = results.filter((r) => (ctCounts.get(r.ct) ?? 0) > 1).length;
       setText(
         "fail-eq-status",
@@ -1220,7 +1228,7 @@ function template(): string {
           <div><dt>d</dt><dd>length of the AES-derived keystream S (source of Y)</dd></div>
         </dl>
 
-        <div class="feistel-stage" aria-labelledby="feistel-stage-heading">
+        <div class="feistel-stage" role="group" aria-labelledby="feistel-stage-heading">
           <h3 class="sub-h" id="feistel-stage-heading">Watch the swap</h3>
           <p class="callout">Each round replaces the right half with <code>(A + Y) mod r<sup>m</sup></code>, then the halves swap positions. Step through and watch which digits change (highlighted) and how B slides into A's place.</p>
           <div class="feistel-boxes" role="group" aria-label="Feistel half state">
@@ -1242,7 +1250,7 @@ function template(): string {
           </div>
         </div>
 
-        <div class="round-zoom" aria-labelledby="round-zoom-heading">
+        <div class="round-zoom" role="group" aria-labelledby="round-zoom-heading">
           <h3 class="sub-h" id="round-zoom-heading">Zoom into one round — where Y comes from</h3>
           <p class="callout">The table below reports Y as a big integer. Here is how that number is actually produced for a single round, step by step. Pick a round to expand:</p>
           <div class="field round-zoom-picker">
@@ -1254,7 +1262,7 @@ function template(): string {
           <div id="round-zoom-body" class="round-zoom-body" aria-live="polite"></div>
         </div>
 
-        <details class="rounds-table-details">
+        <details class="rounds-table-details" id="rounds-table-details" hidden>
           <summary>Full round table (all 10 rounds)</summary>
         <div class="table-wrap" tabindex="0" role="region" aria-label="FF1 round-by-round state">
           <table class="rounds-table">
@@ -1298,14 +1306,18 @@ function template(): string {
         <p class="callout">FPE is deterministic on (key, tweak). If you re-use both across a dataset, repeated values stay visibly repeated. This is why frequency-based attacks still work on FPE-protected fields.</p>
         <div class="field">
           <label for="fail-eq-list">Plaintexts (one per line, digits only)</label>
-          <textarea id="fail-eq-list" rows="5" spellcheck="false" autocomplete="off">1111
-2222
-1111
-3333
-2222</textarea>
+          <!-- Six digits, not four: this lab's FF1 enforces the Rev. 1 floor of
+               radix^len >= 10^6, so 4-digit samples made the exhibit's own
+               default input unrunnable ("Domain too small"). 10^6 clears the
+               floor exactly and the duplicates still leak. -->
+          <textarea id="fail-eq-list" rows="5" spellcheck="false" autocomplete="off">111111
+222222
+111111
+333333
+222222</textarea>
         </div>
         <button id="fail-eq-run" type="button">Encrypt all (same key + tweak)</button>
-        <div class="table-wrap" tabindex="0" role="region" aria-label="Equality leak results">
+        <div class="table-wrap" tabindex="0" role="region" aria-label="Equality leak results" id="fail-eq-tablewrap" hidden>
           <table>
             <thead><tr><th scope="col">Plaintext</th><th scope="col">Ciphertext</th></tr></thead>
             <tbody id="fail-eq-tbody"></tbody>

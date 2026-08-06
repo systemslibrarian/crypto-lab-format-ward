@@ -296,7 +296,14 @@ footer {
 .grid {
   margin-top: 1rem;
   display: grid;
-  grid-template-columns: 1fr;
+  /* minmax(0, 1fr), not bare 1fr: a bare 1fr track cannot shrink below its
+     items' automatic minimum, and Panel 3's comparison table (min-width:
+     380px, plus panel padding) sets that minimum at 409px — which dragged
+     every panel past a 380px viewport and forced the whole page to scroll
+     sideways (WCAG 1.4.10). With the track floored at 0 the panel shrinks
+     and the table scrolls inside its own .table-wrap, as designed. The
+     two-column rule below already did this. */
+  grid-template-columns: minmax(0, 1fr);
   gap: 1rem;
 }
 
@@ -1100,10 +1107,12 @@ textarea {
 [data-theme="light"] .status,
 [data-theme="light"] .glossary > summary,
 [data-theme="light"] .advanced-details > summary,
-[data-theme="light"] .rounds-table-details > summary { color: #0c7c72; } /* was #0f9b8e, now ≥4.6:1 on theme surfaces */
+[data-theme="light"] .rounds-table-details > summary,
+[data-theme="light"] .fpe-arrow { color: #0c7c72; } /* was #0f9b8e (3.44:1 on white), now ≥4.6:1 on theme surfaces */
 [data-theme="light"] .glossary dt,
 [data-theme="light"] .sub-h,
-[data-theme="light"] .param-gloss dt { color: #b15200; } /* was #ef6f00, now ≥4.6:1 on theme surfaces */
+[data-theme="light"] .param-gloss dt,
+[data-theme="light"] .digit-pulse { color: #b15200; } /* was #ef6f00 (3.02:1 on white), now ≥4.6:1 on theme surfaces */
 
 /* ── Codebook attack lab ── */
 .attack-lab .field { margin: 0.6rem 0; }
