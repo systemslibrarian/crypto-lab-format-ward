@@ -1,5 +1,12 @@
 import { expect, test, type Page } from '@playwright/test';
-import { NARROW, boot, scan, settle } from './gate';
+import {
+  NARROW,
+  boot,
+  expectBaselineNotStale,
+  expectNoNewNonTextFailures,
+  scan,
+  settle,
+} from './gate';
 
 /**
  * WCAG regression gate.
@@ -283,3 +290,60 @@ for (const theme of THEMES) {
     });
   }
 }
+
+/**
+ * The third rule of the non-text baseline, and why it needs a test of its own.
+ *
+ * `nontext-baseline.ts` announces three rules; `expectBaselineNotStale` is the
+ * third — a baselined finding that no longer appears fails, so a fixed entry
+ * has to be deleted instead of lingering as a permanent exemption. It was
+ * exported from `gate.ts` and never imported, so it had never run and this
+ * baseline could only grow.
+ *
+ * It cannot be bolted onto the tests above. `nonTextSeen` is module state, so
+ * the check only ever sees the states its own worker drove, and every test
+ * above drives exactly ONE state. Worse, the six non-shared entries are not
+ * merely state-specific, they are one-state-each AND light-theme-only, which
+ * a capture pass through the gate's own path measured:
+ *
+ *   #start-run    2.21:1  light, 'start here / rejected input'
+ *   #custom-run   2.21:1  light, 'use-case panels / all four computed'
+ *   #mask-run     2.21:1  light, 'mask panel / ZIP refused'
+ *   #feistel-next 2.13:1  light, 'round walkthrough'
+ *   #fail-av-run  2.21:1  light, 'failure lab'
+ *   #attack-run   2.21:1  light, 'codebook attack'
+ *
+ * They are one-state-each because `nontext.ts` skips `disabled` controls —
+ * the WCAG 1.4.11 exemption for inactive components — and this lab disables
+ * every run button until its panel is usable, so each is measurable only in
+ * the state that enables it. They are light-only because the boundary is drawn
+ * against the light surface. No single existing test can see more than one of
+ * them, so wiring the ratchet into them reported six false stales in all
+ * twenty-two.
+ *
+ * This test therefore re-walks the whole state matrix in ONE worker so the set
+ * is a real union. It calls `expectNoNewNonTextFailures` rather than `scan`:
+ * the twenty-two tests above already run the full WCAG gate on these states,
+ * and what this one needs is the non-text audit that feeds `nonTextSeen`.
+ * Both themes and both widths are walked rather than just the light desktop
+ * pass the measurements above would justify, so that a future entry living in
+ * dark or at 380px does not read as stale.
+ */
+test('non-text baseline: every baselined finding still appears somewhere', async ({ page }) => {
+  test.setTimeout(600_000);
+  const desktop = page.viewportSize();
+  for (const theme of THEMES) {
+    for (const state of STATES) {
+      if (desktop) await page.setViewportSize(desktop);
+      await boot(page, theme);
+      await state.drive(page);
+      await settle(page);
+      await expectNoNewNonTextFailures(page, `${theme} / ${state.label} / 1280px`);
+
+      await page.setViewportSize(NARROW);
+      await settle(page);
+      await expectNoNewNonTextFailures(page, `${theme} / ${state.label} / ${NARROW.width}px`);
+    }
+  }
+  expectBaselineNotStale();
+});
