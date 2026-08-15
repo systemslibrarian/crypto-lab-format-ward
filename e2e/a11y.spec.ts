@@ -31,7 +31,7 @@ import {
  * three buttons shipped unscanned.
  */
 
-const THEMES = ['dark', 'light'] as const;
+const THEMES = ['dark'] as const;
 
 /** Codebook recovery enumerates 1,000 real FF3-1 encryptions via WebCrypto. */
 const ATTACK_TIMEOUT = 60_000;
