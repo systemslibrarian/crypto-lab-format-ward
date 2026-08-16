@@ -18,10 +18,4 @@ export const NONTEXT_BASELINE: Record<
   { ratio: number; required: number; unverified: boolean }
 > = {
   "control-boundary|a.cl-btn": { ratio: 1.83, required: 3.0, unverified: false },
-  "control-boundary|button#attack-run": { ratio: 2.21, required: 3.0, unverified: false },
-  "control-boundary|button#custom-run": { ratio: 2.21, required: 3.0, unverified: false },
-  "control-boundary|button#fail-av-run": { ratio: 2.21, required: 3.0, unverified: false },
-  "control-boundary|button#feistel-next.mini-btn": { ratio: 2.13, required: 3.0, unverified: false },
-  "control-boundary|button#mask-run": { ratio: 2.21, required: 3.0, unverified: false },
-  "control-boundary|button#start-run": { ratio: 2.21, required: 3.0, unverified: false }
 };
