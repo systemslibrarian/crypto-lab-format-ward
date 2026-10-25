@@ -1,0 +1,38 @@
+import { expect, test } from '@playwright/test';
+
+test('format-only matching narrows a real FF1 release, while padded control stays ambiguous', async ({ page }) => {
+  await page.goto('.');
+  await expect(page.locator('#shape-mode')).toHaveValue('padded');
+  await page.click('#shape-run');
+  await expect(page.locator('#shape-output')).toBeVisible();
+  await expect(page.locator('#shape-metrics')).toContainText('0 of 8');
+  await expect(page.locator('#shape-metrics')).toContainText('0.0000 bits');
+  await expect(page.locator('#shape-output tbody tr')).toHaveCount(8);
+  for (const text of await page.locator('#shape-output tbody tr td:last-child').allTextContents()) expect(text.split(', ')).toHaveLength(8);
+  await page.selectOption('#shape-mode', 'fpe');
+  await expect(page.locator('#shape-output')).toBeHidden();
+  await page.selectOption('#shape-view', 'both');
+  await page.click('#shape-run');
+  await expect(page.locator('#shape-metrics')).toContainText('6 of 8');
+  await expect(page.locator('#shape-metrics')).toContainText('2.7500 bits');
+  const counts = (await page.locator('#shape-output tbody tr td:last-child').allTextContents()).map(s => s.split(', ').length);
+  expect(counts.sort()).toEqual([1,1,1,1,1,1,2,2]);
+  const entropy = counts.reduce((sum, k) => sum + Math.log2(k) / 8, 0);
+  expect(3 - entropy).toBe(2.75);
+  await page.locator('#shape-output summary').click();
+  const first = await page.locator('#shape-bytes').textContent();
+  await page.click('#shape-run');
+  await expect(page.locator('#shape-output')).toBeVisible();
+  expect(await page.locator('#shape-bytes').textContent()).not.toBe(first);
+  await expect(page.locator('#shape-metrics')).toContainText('6 of 8');
+  await page.locator('#shape-view').dispatchEvent('change');
+  await expect(page.locator('#shape-output')).toBeVisible();
+  await page.selectOption('#shape-view', 'words');
+  await expect(page.locator('#shape-output')).toBeHidden();
+  await expect(page.locator('#shape-status')).toContainText('retired');
+  await page.click('#shape-run');
+  await expect(page.locator('#shape-output')).toBeVisible();
+  await expect(page.locator('#shape-leakage')).toContainText('does not break FF1');
+  await expect(page.locator('#shape-leakage')).toContainText('not proof of identity');
+  await expect(page.locator('#shape-leakage')).toContainText('uniform prior');
+});
