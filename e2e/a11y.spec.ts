@@ -57,6 +57,44 @@ interface State {
 
 const STATES: State[] = [
   {
+    label: 'padded synthetic release remains ambiguous',
+    drive: async page => {
+      await page.locator('#shape-run').click();
+      await expect(page.locator('#shape-output')).toBeVisible();
+      await expect(page.locator('#shape-metrics')).toContainText('0 of 8');
+      await page.locator('#shape-output summary').click();
+    },
+  },
+  {
+    label: 'FF1 format matching with unique and ambiguous candidates',
+    drive: async page => {
+      await page.selectOption('#shape-mode', 'fpe');
+      await page.selectOption('#shape-view', 'both');
+      await page.locator('#shape-run').click();
+      await expect(page.locator('#shape-metrics')).toContainText('6 of 8');
+    },
+  },
+  {
+    label: 'released FF1 ciphertext and auxiliary roster disclosure',
+    drive: async page => {
+      await page.selectOption('#shape-mode', 'fpe');
+      await page.selectOption('#shape-view', 'both');
+      await page.locator('#shape-run').click();
+      await expect(page.locator('#shape-metrics')).toContainText('6 of 8');
+      await page.locator('#shape-output summary').click();
+      await expect(page.locator('#shape-bytes')).toBeVisible();
+    },
+  },
+  {
+    label: 'format matching retired after changing the auxiliary view',
+    drive: async page => {
+      await page.locator('#shape-run').click();
+      await expect(page.locator('#shape-output')).toBeVisible();
+      await page.selectOption('#shape-view', 'words');
+      await expect(page.locator('#shape-output')).toBeHidden();
+    },
+  },
+  {
     // The default mount. boot() has already asserted the async pieces of
     // first paint: the WebCrypto vector smoke check, the feasibility rows for
     // the default 4-digit domain, and the domain calculator's Rev. 1 refusal.

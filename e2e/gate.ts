@@ -133,7 +133,8 @@ export async function boot(page: Page, theme: 'dark' | 'light'): Promise<void> {
   // The whole lab is injected by JS into an empty #app. Assert the structure
   // every scan relies on is really there, so no scan can pass over a shell.
   await expect(page.locator('.cl-hero-title')).toHaveText('Format Ward');
-  await expect(page.locator('.panel')).toHaveCount(8);
+  await expect(page.locator('.panel')).toHaveCount(9);
+  await expect(page.locator('#shape-leakage')).toHaveCount(1);
 
   // First-paint content that arrives asynchronously or from JS wiring: the
   // NIST vector smoke check runs real WebCrypto after mount, the feasibility

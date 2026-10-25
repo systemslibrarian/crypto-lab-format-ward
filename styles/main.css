@@ -1151,3 +1151,6 @@ textarea {
   color: var(--danger);
   border-color: var(--danger);
 }
+#shape-leakage select { display: block; width: 100%; max-width: 100%; margin-bottom: 1rem; }
+#shape-leakage label { display: block; }
+#shape-leakage { margin-top: 1rem; min-width: 0; }

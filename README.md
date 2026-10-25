@@ -85,3 +85,26 @@ npm run dev
 *Part of the [Crypto Lab](https://crypto-lab.systemslibrarian.dev/) suite.*
 
 *"So whether you eat or drink or whatever you do, do it all for the glory of God." — 1 Corinthians 10:31*
+## Paper-derived format reidentification exhibit
+
+The separate format-leakage panel follows Boesgaard and Larsen,
+[Format-Preserving Encryption Creates a Privacy Attack Surface for Re-Identification](https://eprint.iacr.org/2026/993),
+§3.1–3.2. Eight invented name/city records are encrypted with real FF1 over all
+letters in each field, preserving space positions. Every field uses a fresh tweak
+and release rows are shuffled. A keyless matcher receives only ciphertext strings
+and the synthetic auxiliary roster; it filters by name length, name word lengths,
+or joint name/city shape. The UI computes candidate sets and Shannon leakage for
+an explicitly uniform prior. It never substitutes the paper's population rates.
+
+The default control encrypts fixed 128-byte padded records with fresh AES-GCM
+nonces. Its format view leaves all eight candidates possible. This demonstrates
+removal of one format distinction, not anonymity against other metadata. Unique
+matches are claims only about the declared complete roster, not proof of identity
+in a real or incomplete population. No FF1 key recovery is claimed.
+
+Validation: 36 unit tests and 19 browser/accessibility tests, including desktop
+and 380px scans of the padded, FF1, disclosure and retired states. Run
+`node tools/check-format-mutations.mjs` for successful-build assertion mutations
+of matching, leakage arithmetic and the negative identity claim, with exact
+source/bundle restoration. Existing vector and codebook checks remain unchanged.
+

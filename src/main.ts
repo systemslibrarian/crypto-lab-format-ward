@@ -1,4 +1,5 @@
 import { initUI } from "./ui";
+import { mountReidentification } from './reidentification-ui';
 
 function installThemeToggle(): void {
 	const root = document.documentElement;
@@ -25,4 +26,5 @@ function installThemeToggle(): void {
 }
 
 initUI();
+mountReidentification();
 installThemeToggle();
