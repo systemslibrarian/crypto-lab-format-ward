@@ -861,9 +861,12 @@ function template(): string {
             <span class="scope-when">2021</span>
             <strong>FF3-1 falls as well.</strong> Tim Beyne, <em>Linear Cryptanalysis of FF3-1 and FEA</em>
             (CRYPTO 2021), attacks the alternating round-tweak <em>schedule</em> rather than the tweak's size.
-            FF3-1 over a domain of N = 1000 can be distinguished from an ideal tweakable block cipher with
+            FF3-1 on six-digit decimal values can be distinguished from an ideal tweakable block cipher with
             advantage at least 1/10 using about 2<sup>23</sup> encryption queries — roughly eight million, which
-            is an afternoon on a laptop. Shrinking the tweak had patched the wrong parameter.
+            is an afternoon on a laptop. In the paper the Feistel half has size N = 1000, so the domain is
+            N<sup>2</sup> = 10<sup>6</sup>: Beyne's worked example sits <em>at</em> the 10<sup>6</sup> floor
+            Rev. 1 would later make a requirement, not below it. Shrinking the tweak had patched the wrong
+            parameter.
           </li>
           <li class="scope-now">
             <span class="scope-when">3 February 2025</span>
@@ -935,7 +938,7 @@ function template(): string {
           plaintext&rarr;ciphertext codebook, and reads off the secret. No key, no cryptanalysis.
         </p>
         <p class="hint">
-          <strong>Honest scale.</strong> The <em>specific</em> Durak&ndash;Vaudenay / Beyne
+          <strong>Honest scale.</strong> The <em>specific</em> Beyne
           cryptanalysis of FF3-1's tweak schedule needs ~2<sup>23</sup> (≈8 million) chosen queries —
           hours of AES, out of browser reach, so it is cited, not run. Codebook recovery is what
           those attacks reduce the cipher to on realistic field sizes, and it is exactly what the
@@ -1160,7 +1163,7 @@ function template(): string {
               <tbody>
                 <tr><td>FF1</td><td>Specified — the only one left</td><td>No known practical attack at radix<sup>minlen</sup> &ge; 10<sup>6</sup>. Below that floor, Hoang&ndash;Tessaro&ndash;Trieu (2018) applies to FF1 too.</td></tr>
                 <tr><td>FF3</td><td>Broken; removed from Rev. 1</td><td>Message recovery in about N<sup>11/6</sup> chosen plaintexts, N<sup>5</sup> time (Durak &amp; Vaudenay, 2017).</td></tr>
-                <tr><td>FF3-1</td><td>Broken; removed from Rev. 1</td><td>Linear attack on the alternating tweak schedule: N = 1000 distinguished with advantage &ge; 1/10 in about 2<sup>23</sup> queries (Beyne, 2021).</td></tr>
+                <tr><td>FF3-1</td><td>Broken; removed from Rev. 1</td><td>Linear attack on the alternating tweak schedule: a 10<sup>6</sup> domain (Feistel half N = 1000) distinguished with advantage &ge; 1/10 in about 2<sup>23</sup> queries (Beyne, 2021).</td></tr>
               </tbody>
             </table>
           </div>

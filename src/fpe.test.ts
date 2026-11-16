@@ -8,6 +8,7 @@ import {
   hexToBytes,
   importAesKeyFromHex,
   importFf3KeyFromHex,
+  MIN_DOMAIN_SIZE,
   reverseHex,
   stringToSymbols,
   symbolsToString,
@@ -262,6 +263,21 @@ describe("input validation and edge cases", () => {
   it("accepts exactly the Rev. 1 floor (10^6)", async () => {
     const key = await importAesKeyFromHex("2b7e151628aed2a6abf7158809cf4f3c");
     const ct = await ff1Encrypt(key, 10, [1, 2, 3, 4, 5, 6], new Uint8Array());
+    expect(ct).toHaveLength(6);
+  });
+
+  it("Beyne's FF3-1 example sits at the Rev. 1 floor, not below it", async () => {
+    // Beyne, "Linear Cryptanalysis of FF3-1 and FEA" (ePrint 2021/815, CRYPTO
+    // 2021), abstract: "where N^2 is the domain size", and the worked example
+    // is "FF3-1 with N = 10^3 ... 2^23 encryption queries". N is the Feistel
+    // half-size, so that domain is 10^6 — exactly MIN_DOMAIN_SIZE, which is
+    // why the page must not present the Rev. 1 floor as putting the attack
+    // out of reach. Pinned because "a domain of N = 1000" read 1,000.
+    const BEYNE_FEISTEL_HALF = 1000n;
+    expect(BEYNE_FEISTEL_HALF ** 2n).toBe(MIN_DOMAIN_SIZE);
+    // Six decimal digits is that domain, and the guard accepts it.
+    const key3 = await importFf3KeyFromHex("2de79d232df5585d68ce47882ae256d6");
+    const ct = await ff3_1Encrypt(key3, 10, toDigitSymbols("123456"), hexToBytes("d8e7920afa330a"));
     expect(ct).toHaveLength(6);
   });
 

@@ -36,7 +36,7 @@ An inline glossary near the top of the page defines radix, tweak, domain, Feiste
 
 ## What Can Go Wrong
 
-- FF3-1 is broken, not merely "reduced margin": Beyne's linear cryptanalysis (CRYPTO 2021) distinguishes FF3-1 over a domain of N = 1000 from an ideal tweakable block cipher with advantage at least 1/10 using about 2^23 queries, and NIST removed the mode in response. Note the common misattribution: Durak-Vaudenay (2017) broke FF3, the 64-bit-tweak original, and FF3-1 was the *response* to that paper — citing it as the reason FF3-1 is unsafe gets the history backwards.
+- FF3-1 is broken, not merely "reduced margin": Beyne's linear cryptanalysis (CRYPTO 2021) distinguishes FF3-1 on six-digit decimal values from an ideal tweakable block cipher with advantage at least 1/10 using about 2^23 encryption queries, and NIST removed the mode in response. In the paper N is the Feistel half-size and N^2 the domain, so that worked example (N = 1000) is a 10^6-value domain — exactly the floor Rev. 1 would later make a requirement, not something below it. Note the common misattribution: Durak-Vaudenay (2017) broke FF3, the 64-bit-tweak original, and FF3-1 was the *response* to that paper — citing it as the reason FF3-1 is unsafe gets the history backwards.
 - Invalid FF3-1 tweak length: FF3-1 requires a 56-bit tweak (7 bytes or 14 hex characters), and wrong length causes incorrect operation and non-interoperable ciphertext.
 - Small-domain leakage risk: small or highly structured domains can make guessing and statistical recovery materially easier for format-preserving modes.
 - Deterministic equality leakage from key and tweak reuse: reusing the same key and tweak over repeated identifiers can reveal when plaintext values repeat.
@@ -56,7 +56,7 @@ The cryptanalysis, with what each paper actually claims:
 
 - [Durak & Vaudenay, CRYPTO 2017](https://eprint.iacr.org/2017/521) — *Breaking the FF3 Format-Preserving Encryption Standard Over Small Domains.* Against a Feistel half-domain of size N, message recovery in about N^(11/6) chosen plaintexts and N^5 time. Breaks **FF3**.
 - [Hoang, Tessaro & Trieu, CRYPTO 2018](https://eprint.iacr.org/2018/556) — *The Curse of Small Domains: New Attacks on Format-Preserving Encryption.* Known-plaintext message recovery against **both FF1 and FF3**, feasible on domains as small as 8 bits. This is the paper behind the 10^6 floor.
-- [Beyne, CRYPTO 2021](https://eprint.iacr.org/2021/815) — *Linear Cryptanalysis of FF3-1 and FEA.* Attacks the alternating round-tweak schedule, not the tweak size. FF3-1 at N = 1000 is distinguishable from an ideal tweakable block cipher with advantage >= 1/10 using about 2^23 queries. Breaks **FF3-1**, and is the reason NIST removed it.
+- [Beyne, CRYPTO 2021](https://eprint.iacr.org/2021/815) — *Linear Cryptanalysis of FF3-1 and FEA.* Attacks the alternating round-tweak schedule, not the tweak size. Against a Feistel half-size N (domain N^2), FF3-1 at N = 1000 — a 10^6-value domain — is distinguishable from an ideal tweakable block cipher with advantage >= 1/10 using about 2^23 encryption queries. Breaks **FF3-1**, and is the reason NIST removed it.
 
 ## Real-World Usage
 

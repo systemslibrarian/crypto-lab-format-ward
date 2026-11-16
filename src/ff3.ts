@@ -14,9 +14,11 @@
  * It targets the alternating round-tweak schedule below — note how splitTweak56
  * derives a fixed (tl, tr) pair and ff3_1Encrypt alternates them across rounds,
  * XORing in only the round index. That regularity, not the tweak's length, is
- * the weakness; shrinking the tweak never addressed it. FF3-1 at N = 1000 is
- * distinguishable from an ideal tweakable block cipher with advantage >= 1/10
- * using about 2^23 queries.
+ * the weakness; shrinking the tweak never addressed it. The paper's N is the
+ * Feistel half-size and N^2 the domain, so its worked example — FF3-1 at
+ * N = 1000, i.e. a 10^6-value domain — is distinguishable from an ideal
+ * tweakable block cipher with advantage >= 1/10 using about 2^23 encryption
+ * queries. That is the Rev. 1 floor itself, not a domain below it.
  *
  * Kept runnable so the page can show a broken construction beside a sound one.
  */

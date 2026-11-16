@@ -1,8 +1,8 @@
 /**
  * attack.ts — a live, computed break of FF3-1 on a small domain.
  *
- * Honest scope, stated plainly on the page: the *specific* Durak–Vaudenay /
- * Beyne cryptanalysis of FF3-1's tweak schedule is a statistical attack needing
+ * Honest scope, stated plainly on the page: the *specific* Beyne
+ * cryptanalysis of FF3-1's tweak schedule is a statistical attack needing
  * on the order of 2^23 (~8 million) chosen queries — hours of AES even natively,
  * far out of browser reach, so it is cited, not run. What IS browser-feasible,
  * and what those attacks reduce the cipher to on realistic field sizes, is
@@ -24,7 +24,9 @@ import {
 import { ff3_1EncryptUnchecked } from "./ff3";
 
 const NIST_MIN_DOMAIN = 1_000_000; // SP 800-38G Rev. 1 requirement (10^6)
-const BEYNE_QUERIES = 2 ** 23; // ~8.4M, Beyne CRYPTO 2021 distinguisher on N=1000
+// ~8.4M, Beyne CRYPTO 2021 distinguisher at Feistel half-size N = 1000, i.e. a
+// domain of N^2 = 10^6 — the same 10^6 as NIST_MIN_DOMAIN above, not 1,000.
+const BEYNE_QUERIES = 2 ** 23;
 
 function randomTweakHex(): string {
   // 56-bit (7-byte) FF3-1 tweak.
