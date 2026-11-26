@@ -11,16 +11,16 @@ export interface MaskParseResult {
 
 const DIGITS = "0123456789";
 
-export function digitsOnly(input: string): string {
-  return input.replace(/\D/g, "");
+export function stripCardSeparators(input: string): string {
+  return input.replace(/[ -]/g, "");
 }
 
 export function isCreditCardCandidate(input: string): boolean {
-  return /^\d{16}$/.test(digitsOnly(input));
+  return /^\d{16}$/.test(stripCardSeparators(input));
 }
 
 export function luhnValid(cardNumber: string): boolean {
-  const raw = digitsOnly(cardNumber);
+  const raw = stripCardSeparators(cardNumber);
   if (!/^\d+$/.test(raw)) {
     return false;
   }
@@ -107,12 +107,14 @@ export function fromDigitSymbols(value: SymbolArray): string {
   return symbolsToString(value, DIGITS);
 }
 
-export function validateCustomAlphabet(alphabet: string): void {
-  if (alphabet.length < 2) {
+export function validateCustomAlphabet(alphabet: string): number {
+  const symbols = Array.from(alphabet);
+  if (symbols.length < 2) {
     throw new Error("Custom alphabet must contain at least 2 symbols.");
   }
-  const unique = new Set(alphabet.split(""));
-  if (unique.size !== alphabet.length) {
+  const unique = new Set(symbols);
+  if (unique.size !== symbols.length) {
     throw new Error("Custom alphabet cannot contain duplicate symbols.");
   }
+  return symbols.length;
 }

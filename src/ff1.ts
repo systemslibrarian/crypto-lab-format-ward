@@ -425,8 +425,8 @@ export async function ff1Decrypt(
 
 export function stringToSymbols(input: string, alphabet: string): SymbolArray {
   const index = new Map<string, number>();
-  for (let i = 0; i < alphabet.length; i += 1) {
-    index.set(alphabet[i], i);
+  for (const [i, symbol] of Array.from(alphabet).entries()) {
+    index.set(symbol, i);
   }
 
   const symbols: SymbolArray = [];
@@ -441,5 +441,6 @@ export function stringToSymbols(input: string, alphabet: string): SymbolArray {
 }
 
 export function symbolsToString(symbols: SymbolArray, alphabet: string): string {
-  return symbols.map((s) => alphabet[s]).join("");
+  const characters = Array.from(alphabet);
+  return symbols.map((s) => characters[s]).join("");
 }

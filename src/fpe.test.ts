@@ -13,6 +13,7 @@ import {
   stringToSymbols,
   symbolsToString,
 } from "./ff1";
+import { validateCustomAlphabet, isCreditCardCandidate, luhnValid } from "./formats";
 import { ff3_1Decrypt, ff3_1Encrypt } from "./ff3";
 import { fromDigitSymbols, toDigitSymbols } from "./formats";
 
@@ -295,5 +296,28 @@ describe("input validation and edge cases", () => {
     await expect(ff3_1Encrypt(key, 10, toDigitSymbols("3992520240"), hexToBytes("cbd0928097"))).rejects.toThrow(
       /7 bytes/,
     );
+  });
+});
+
+describe("student input encodings", () => {
+  it("uses one radix digit per Unicode code point", async () => {
+    const alphabet = "😀😁";
+    const radix = validateCustomAlphabet(alphabet);
+    const plain = "😀😁".repeat(10);
+    const digits = stringToSymbols(plain, alphabet);
+    expect(radix).toBe(2);
+    expect(digits).toHaveLength(20);
+    expect(() => validateCustomAlphabet("😀😀")).toThrow(/duplicate/);
+    const key = await importAesKeyFromHex("00".repeat(32));
+    const cipher = await ff1Encrypt(key, radix, digits, new Uint8Array());
+    expect(Array.from(symbolsToString(cipher, alphabet))).toHaveLength(20);
+    expect(symbolsToString(await ff1Decrypt(key, radix, cipher, new Uint8Array()), alphabet)).toBe(plain);
+  });
+
+  it("accepts card separators and rejects embedded letters", () => {
+    for (const assess of [isCreditCardCandidate, luhnValid]) {
+      expect(assess("4111-1111 1111-1111")).toBe(true);
+      expect(assess("4111x1111 1111 1111")).toBe(false);
+    }
   });
 });

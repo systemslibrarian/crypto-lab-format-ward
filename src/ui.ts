@@ -18,6 +18,7 @@ import {
   MaskedFormat,
   fromDigitSymbols,
   isCreditCardCandidate,
+  stripCardSeparators,
   luhnValid,
   mergeMaskedDigits,
   parseMaskedFormat,
@@ -224,9 +225,9 @@ function wirePanel1(): void {
     disableButton("cc-run");
     setText("cc-status", "Running...");
     try {
-      const input = getInputValue("cc-plain").replace(/\D/g, "");
+      const input = stripCardSeparators(getInputValue("cc-plain"));
       if (!isCreditCardCandidate(input)) {
-        throw new Error("Credit card input must be exactly 16 digits.");
+        throw new Error("Enter 16 digits. Spaces and hyphens are allowed between groups.");
       }
 
       const { ff1Key, ff3Key } = await parseKeyPair("cc-key");
@@ -250,6 +251,7 @@ function wirePanel1(): void {
       setText("cc-roundtrip", `FF1\u2009\u2192\u2009${ff1Back} | FF3-1\u2009\u2192\u2009${ff31Back}`);
       setText("cc-status", "Done.");
     } catch (error) {
+      for (const id of ["cc-ff1-out", "cc-ff3-out", "cc-ff1-luhn", "cc-ff3-luhn", "cc-roundtrip"]) setText(id, "—");
       setText("cc-status", (error as Error).message);
     } finally {
       enableButton("cc-run");
@@ -329,21 +331,22 @@ function wirePanel4(): void {
     setText("custom-status", "Running...");
     try {
       const alphabet = getInputValue("custom-alphabet");
-      validateCustomAlphabet(alphabet);
+      const radix = validateCustomAlphabet(alphabet);
 
       const plain = getInputValue("custom-plain");
       const key = await parseAes256Key("custom-key");
       const tweak = parseOptionalHexTweak(getInputValue("custom-tweak"));
 
       const symbols = stringToSymbols(plain, alphabet);
-      const cipher = await ff1Encrypt(key, alphabet.length, symbols, tweak);
-      const back = await ff1Decrypt(key, alphabet.length, cipher, tweak);
+      const cipher = await ff1Encrypt(key, radix, symbols, tweak);
+      const back = await ff1Decrypt(key, radix, cipher, tweak);
 
       setText("custom-out", symbolsToString(cipher, alphabet));
       setText("custom-back", symbolsToString(back, alphabet));
-      setText("custom-len", `${plain.length}`);
+      setText("custom-len", `${symbols.length}`);
       setText("custom-status", "Done.");
     } catch (error) {
+      for (const id of ["custom-out", "custom-back", "custom-len"]) setText(id, "—");
       setText("custom-status", (error as Error).message);
     } finally {
       enableButton("custom-run");
@@ -1053,7 +1056,7 @@ function template(): string {
           <p class="callout">Use case: PCI-DSS tokenization, payment processors, vault-less tokenization.</p>
           <div class="field">
             <label for="cc-plain">16-digit PAN</label>
-            <input id="cc-plain" type="text" inputmode="numeric" pattern="[0-9 ]{16,19}" autocomplete="off" value="4111111111111111" />
+            <input id="cc-plain" type="text" inputmode="numeric" autocomplete="off" value="4111111111111111" />
           </div>
           <div class="field">
             <label for="cc-key">AES-256 Key (hex)</label>
@@ -1174,7 +1177,7 @@ function template(): string {
           <h3 id="panel4-heading">Panel 4 — Custom Alphabet</h3>
           <p class="callout">Use case: encrypted usernames, token generation, obfuscated IDs.</p>
           <div class="field">
-            <label for="custom-alphabet">Alphabet</label>
+            <label for="custom-alphabet">Alphabet (one Unicode code point per symbol)</label>
             <input id="custom-alphabet" type="text" spellcheck="false" autocomplete="off" value="abcdefghijklmnopqrstuvwxyz0123456789" />
           </div>
           <div class="field">
